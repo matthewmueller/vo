@@ -240,30 +240,3 @@ function type(v) {
     ? 'vo'
     : typeof v;
 }
-
-
-
-// a = create('a');
-// b = [create('b1'), create('b2'), create('b3')]
-// c = {
-//   a: create('ca'),
-//   b: create('cb'),
-//   c: create('cc')
-// };
-// d = create('d');
-//
-// Vo({ a: a, b: b }, [a, c])('lol', function(err, o) {
-//   if (err) throw err;
-//   console.log('out: %j', o);
-// })
-//
-// function create(name) {
-//   return function(m, done) {
-//     var wait = ~~(Math.random() * 2000);
-//     console.log('starting %s with %j, waiting: %sms', name, m, wait);
-//     setTimeout(function() {
-//       console.log('ending %s with %j', name, m);
-//       done(null, name);
-//     }, wait);
-//   }
-// }
