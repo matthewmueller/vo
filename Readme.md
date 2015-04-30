@@ -1,7 +1,9 @@
 
 ![img](https://cldup.com/GbKb42jNdt.png)
 
-Vo is a control flow library for minimalists. At less than 250 lines of code, Vo is similar in spirit to [co()](https://github.com/visionmedia/co), but is useful outside the context of generators. If you ever wanted the to use the control flow goodies of co but did not want or could not use generators, then Vo is for you.
+Vo is a control flow library for minimalists. At less than 250 lines of code, Vo is similar in spirit to [co()](https://github.com/visionmedia/co), but is useful outside the context of generators.
+
+If you ever wanted the to use the control flow goodies of co but did not want or could not use generators, then Vo is for you. If you ever wanted the benefits of promises (composeability & error handling) but just use functions, then Vo is for you.
 
 ## Features
 
