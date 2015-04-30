@@ -26,7 +26,7 @@ Vo is a control flow library for minimalists. At less than 250 lines of code, Vo
 
 ## Getting Started
 
-#### Here's how you'd run an asynchronous task with `vo()`:
+##### Here's how you'd run an asynchronous task with `vo()`:
 
 ```js
 var request = require('superagent');
@@ -41,7 +41,7 @@ vo(function(url, done) {
 })
 ```
 
-#### Here's how you'd use generators, like `co()`:
+##### Here's how you'd use generators, like `co()`:
 
 ```js
 var request = require('superagent');
@@ -54,7 +54,7 @@ vo(function *(url) {
 })
 ```
 
-#### And here's how you'd use promises:
+##### And here's how you'd use promises:
 
 ```js
 var request = require('superagent-promise');
@@ -67,7 +67,7 @@ vo(function(url) {
 })
 ```
 
-#### Now let's get a little fancier. This is how you'd run a pipeline of tasks in series:
+##### Now let's get a little fancier. This is how you'd run a pipeline of tasks in series:
 
 ```js
 var db = require('level-11')('./cache');
@@ -95,7 +95,7 @@ vo(get, cache)('http://lapwinglabs.com', function(err) {
 > Arguments from the previous function get passed to
 > the next function.
 
-#### And this is how you'd run a set of tasks in parallel:
+##### And this is how you'd run a set of tasks in parallel:
 
 ```js
 var request = require('superagent-promise');
@@ -115,7 +115,7 @@ vo([
 
 > **Important:** This also works recursively.
 
-#### You can also run tasks in parallel use objects:
+##### You can also run tasks in parallel use objects:
 
 ```js
 var request = require('superagent-promise');
@@ -135,7 +135,7 @@ vo({
 
 > **Important:** This also works recursively.
 
-#### Now for the full monty, let's compose `vo()`'s together for a complex pipeline:
+##### Now for the full monty, let's compose `vo()`'s together for a complex pipeline:
 
 ```js
 function get(url) {
@@ -161,7 +161,7 @@ vo([lapwing, leveredreturns])(function(err) {
 })
 ```
 
-#### Simple, right? Well, it should be.
+##### Simple, right? Well, it should be.
 
 ## Test
 
