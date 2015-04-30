@@ -3,12 +3,6 @@
 
 Vo is a control flow library for minimalists. At less than 250 lines of code, Vo is similar in spirit to [co()](https://github.com/visionmedia/co), but is useful outside the context of generators.
 
-## When I would use Vo
-
-- You want the benefits of promises (composeability & error handling) but just wanted to use functions or existing APIs.
-- You want to use the control flow goodies of co but you cannot or do not want to use generators or wrapped APIs.
-- You just want a simple and concise API for control flow.
-
 ## Features
 
 - Supports synchronous & asynchronous functions, generators and promises.
@@ -17,6 +11,12 @@ Vo is a control flow library for minimalists. At less than 250 lines of code, Vo
 - Browser & server support
 - Backwards compatible with co
 - Well-tested (see below)
+
+## When to use Vo
+
+- You want the benefits of promises (composeability & error handling) but just wanted to use regular functions or existing APIs.
+- You want to use the control flow goodies of co but you cannot or do not want to use generators or wrapped APIs.
+- You just want a simple and concise API for control flow.
 
 ## Installation
 
