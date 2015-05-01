@@ -6,7 +6,7 @@ Vo is a control flow library for minimalists. At less than 250 lines of code, Vo
 ## Features
 
 - Supports synchronous & asynchronous functions, generators and promises.
-- Composeable & catches errors
+- Composable & catches errors
 - Tiny (4kb minified + gzip)
 - Browser & server support
 - Backwards compatible with co
