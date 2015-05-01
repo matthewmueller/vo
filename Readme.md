@@ -14,7 +14,7 @@ Vo is a control flow library for minimalists. At less than 250 lines of code, Vo
 
 ## When to use Vo
 
-- You want the benefits of promises (composeability & error handling) but just wanted to use regular functions or existing APIs.
+- You want the benefits of promises (composability & error handling) but just wanted to use regular functions or existing APIs.
 - You want to use the control flow goodies of co but you cannot or do not want to use generators or wrapped APIs.
 - You just want a simple and concise API for control flow.
 
