@@ -27,15 +27,23 @@ function Vo() {
     var args = sliced(arguments);
     var last = args[args.length - 1];
 
-    // TODO: thunk support
-    var done = 'function' == typeof last
-      ? args.pop()
-      : function() {};
+    if ('function' == typeof last) {
+      var done = args.pop();
+      start(args, done);
+    } else {
+      return curry;
+    }
 
-    series(pipeline, args, function(err, v) {
-      if (err) return done(err);
-      return done(null, v);
-    });
+    function curry(done) {
+      start(args, done);
+    }
+
+    function start(args, done) {
+      series(pipeline, args, function(err, v) {
+        if (err) return done(err);
+        return done(null, v);
+      });
+    }
   }
 
   // TODO: would love to replace this

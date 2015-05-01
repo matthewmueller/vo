@@ -57,13 +57,13 @@ describe('async functions: vo(fn)', function() {
   });
 
   it('should handle errors', function(done) {
-    function sync(a, b, fn) {
+    function async(a, b, fn) {
       assert.equal(a, 'a');
       assert.equal(b, 'b');
       return fn(new Error('some error'));
     }
 
-    Vo(sync)('a', 'b', function(err, v) {
+    Vo(async)('a', 'b', function(err, v) {
       assert.equal('some error', err.message);
       assert.equal(undefined, v);
       done();
@@ -131,6 +131,22 @@ describe('promises: vo(promise)', function() {
     })
   });
 });
+
+describe('thunks: vo(fn)(args, ...)(fn)', function() {
+  it('should support thunks', function(done) {
+    function async(a, b, fn) {
+      assert.equal(a, 'a');
+      assert.equal(b, 'b');
+      return fn(null, a + b);
+    }
+
+    Vo(async)('a', 'b')(function(err, v) {
+      if (err) return done(err);
+      assert.equal(v, 'ab');
+      done();
+    })
+  })
+})
 
 describe('series: vo(fn, ...)', function() {
   it('should run in series', function(done) {
@@ -378,7 +394,7 @@ describe('composition: vo(vo(...), [vo(...), vo(...)])', function() {
     });
   });
 
-  it('should propogate errors', function(done) {
+  it('should propagate errors', function(done) {
     function to(ms, arr) {
       return function(fn) {
         timeout(ms)(function(err, v) {
