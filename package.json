@@ -1,8 +1,15 @@
 {
   "name": "vo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vo is a control flow library for minimalists",
-  "keywords": ["control", "flow", "asynchronous", "generators", "promises", "synchronous"],
+  "keywords": [
+    "control",
+    "flow",
+    "asynchronous",
+    "generators",
+    "promises",
+    "synchronous"
+  ],
   "author": "Matthew Mueller <matt@lapwinglabs.com>",
   "repository": {
     "type": "git",
