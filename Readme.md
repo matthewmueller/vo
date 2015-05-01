@@ -79,7 +79,7 @@ function get(url, fn) {
     .get(url)
     .end(function(err, res) {
       if (err) return fn(err);
-      return fn(url, res.body);
+      return fn(null, url, res.body);
     })
 }
 
@@ -138,26 +138,30 @@ vo({
 ##### Now for the full monty, let's compose `vo()`'s together for a complex pipeline:
 
 ```js
-function get(url) {
-  return function(fn) {
-    request
-      .get(url)
-      .end(function(err, res) {
-        if (err) return fn(err);
-        return fn(url, res.body);
-      })
-  }
+var request = require('superagent');
+var cheerio = require('cheerio');
+var vo = require('vo');
+
+function get(url, fn) {
+  request.get(url)
+    .end(function(err, res) {
+      if (err) return fn(err);
+      return fn(null, url, res.text);
+    })
 }
 
-function *cache(url, body) {
-  return yield db.put(url, body);
+function title(url, text) {
+  var $ = cheerio.load(text);
+  return $('title').text();
 }
 
-var lapwing = vo(get('http://lapwinglabs.com'), cache);
-var leveredreturns = vo(get('http://leveredreturns.com'), cache);
+var req = vo(get, title);
 
-vo([lapwing, leveredreturns])(function(err) {
-  // get and cache these sites in parallel
+vo({
+  lapwing: req('http://lapwinglabs.com'),
+  leveredreturns: req('http://leveredreturns.com')
+})(function(err, res) {
+  // `res` is an object containing each title
 })
 ```
 
