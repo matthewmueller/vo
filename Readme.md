@@ -70,7 +70,7 @@ vo(function(url) {
 ##### Now let's get a little fancier. This is how you'd run a pipeline of tasks in series:
 
 ```js
-var db = require('level-11')('./cache');
+var db = require('co-leveldb')('./cache');
 var request = require('superagent');
 var vo = require('vo');
 
