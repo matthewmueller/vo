@@ -115,7 +115,7 @@ vo([
 
 > **Important:** This also works recursively.
 
-##### You can also run tasks in parallel use objects:
+##### You can also run tasks in parallel using objects:
 
 ```js
 var request = require('superagent-promise');
@@ -127,7 +127,7 @@ function get(url) {
 
 vo({
   lapwing: get('http://lapwinglabs.com'),
-  leveredreturns: 'http://leveredreturns.com'
+  leveredreturns: get('http://leveredreturns.com')
 })(function(err, responses) {
   // `responses` is an object containing the response from each
 })
