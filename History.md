@@ -1,4 +1,11 @@
 
+1.0.2 / 2015-05-01
+==================
+
+  * added: `foreach` (@tunnckoCore)
+  * use strict, strict comparisons (@tunnckoCore)
+  * 200 LOC (@tunnckoCore)
+
 1.0.1 / 2015-04-30
 ==================
 
