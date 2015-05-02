@@ -128,7 +128,7 @@ function resolve_function(fn) {
 }
 
 /**
- * Resolve an object/array recursively
+ * Resolve an object/array recursively (sync)
  *
  * @param {Object|Array} obj
  * @return {Function}
@@ -190,18 +190,6 @@ function type(v) {
   return isArray(v)
     ? 'array'
     : v && v.vo
-    ? 'vo'
-    : typeOf(v);
-}
-
-/**
- * Get the type
- *
- * @param {Mixed} v
- * @return {String}
- */
-
-function typeOf(v) {
-  var toString = Object.prototype.toString;
-  return toString.call(v).slice(8, -1).toLowerCase();
+      ? 'vo'
+      : typeof v;
 }
