@@ -16,6 +16,7 @@
     "url": "git://github.com/lapwinglabs/vo.git"
   },
   "dependencies": {
+    "foreach": "^2.0.5",
     "sliced": "0.0.5",
     "wrap-fn": "^0.1.4"
   },
