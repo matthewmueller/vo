@@ -167,6 +167,35 @@ vo({
 
 ##### Simple, right? Well, it should be.
 
+## Additional API
+
+### vo.catch(onerror)
+
+Catch all errors in the pipeline and have an opportunity to resolve them and continue. As with everything else in vo, `onerror` can be a synchronous function, asynchronous function, generators or promises.
+
+If the error is unresolvable, simply rethrow:
+
+```js
+function a() {
+  throw new Error('oh noz')
+}
+
+function onerror(err) {
+  if (err.message == 'oh noz') {
+    throw new Error('unresolvable')
+  } else {
+    return 'resolved'
+  }
+}
+
+var vo = Vo(a).catch(onerror)
+vo(function(err) {
+  err.message //= unresolvable
+})
+```
+
+You can also make use of `err.upstream` to read the arguments passed into the function that threw an error.
+
 ## Test
 
 We have a comprehensive test suite. Here's how you run it:
@@ -178,39 +207,52 @@ make test
 And here's what we test for:
 
 ```
-sync functions: vo(fn)
-  ✓ should work with synchronous functions
-  ✓ should catch thrown errors
+  sync functions: vo(fn)
+    ✓ should work with synchronous functions
+    ✓ should catch thrown errors
 
-async functions: vo(fn)
-  ✓ should work with asynchronous functions
-  ✓ should handle errors
+  async functions: vo(fn)
+    ✓ should work with asynchronous functions
+    ✓ should handle errors
 
-generators: vo(*fn)
-  ✓ should work with generators
-  ✓ should catch thrown errors
+  generators: vo(*fn)
+    ✓ should work with generators (58ms)
+    ✓ should catch thrown errors
 
-promises: vo(promise)
-  ✓ should work with promises
-  ✓ should handle errors
+  promises: vo(promise)
+    ✓ should work with promises (55ms)
+    ✓ should handle errors
 
-series: vo(fn, ...)
-  ✓ should run in series
-  ✓ should handle errors
+  thunks: vo(fn)(args, ...)(fn)
+    ✓ should support thunks
 
-arrays: vo([...])
-  ✓ should run an array of functions in parallel
-  ✓ should handle errors
+  series: vo(fn, ...)
+    ✓ should run in series (108ms)
+    ✓ should handle errors
 
-objects: vo({...})
-  ✓ should run an object of functions in parallel
-  ✓ should catch any errors
+  arrays: vo([...])
+    ✓ should run an array of functions in parallel (155ms)
+    ✓ should handle errors
 
-composition: vo(vo(...), [vo(...), vo(...)])
-  ✓ should support series composition
-  ✓ should support async composition
-  ✓ should support async composition with objects
-  ✓ should propogate errors
+  objects: vo({...})
+    ✓ should run an object of functions in parallel (154ms)
+    ✓ should catch any errors
+
+  composition: vo(vo(...), [vo(...), vo(...)])
+    ✓ should support series composition (105ms)
+    ✓ should support async composition (205ms)
+    ✓ should support async composition with objects (204ms)
+    ✓ should propagate errors
+
+  vo.catch(fn)
+    ✓ should catch errors and continue
+    ✓ should catch errors and be done
+    ✓ should support catching in arrays
+    ✓ should support catching in arrays and finishing
+    ✓ should support catching in objects
+    ✓ should support catching in objects and finishing
+    ✓ should support catching with composition
+    ✓ should support cascading error handling
 ```
 
 ## License

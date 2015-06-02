@@ -8,6 +8,7 @@ var foreach = require('foreach');
 var sliced = require('sliced');
 var wrap = require('wrap-fn');
 var isArray = Array.isArray;
+var noop = function () {};
 var keys = Object.keys;
 
 /**
@@ -26,6 +27,11 @@ module.exports = Vo;
 function Vo() {
   var pipeline = sliced(arguments);
 
+  var options = {
+    pipeline: true,
+    catch: false
+  };
+
   function vo() {
     var args = sliced(arguments);
     var last = args[args.length - 1];
@@ -42,12 +48,36 @@ function Vo() {
     }
 
     function start(args, done) {
-      series(pipeline, args, function(err, v) {
+      series(pipeline, args, options, function(err, v) {
         if (err) return done(err);
         return done(null, v);
       });
     }
   }
+
+  /**
+   * Catch errors
+   *
+   * @param {Function} fn
+   * @return {Vo}
+   */
+
+  vo.catch = function(fn) {
+    options.catch = 'boolean' == typeof fn ? noop : fn;
+    return vo;
+  }
+
+  /**
+   * Pipeline/Middleware support
+   *
+   * @param {Boolean} pipeline
+   * @return {Vo}
+   */
+
+  vo.pipeline = function(pipeline) {
+    options.pipeline = !!pipeline;
+    return vo;
+  };
 
   // TODO: would love to replace this
   // with "vo instanceof Vo"
@@ -64,20 +94,32 @@ function Vo() {
  * @param {Function} done
  */
 
-function series(pipeline, args, done) {
+function series(pipeline, args, options, done) {
   var pending = pipeline.length;
-  var fns = pipeline.map(seed);
+  var fns = pipeline.map(seed(options));
   var first = fns.shift();
   var ret = [];
 
-  first(args, next);
+  first(args, response);
 
-  function next(err) {
-    if (err) return done(err);
-    var v = sliced(arguments, 1);
+  function response(err) {
+    if (err && options.catch && !err._skip) return caught.apply(null, arguments);
+    else if (err) return done(err);
+    next(sliced(arguments, 1));
+  }
+
+  function caught(err) {
+    err.upstream = sliced(arguments, 1);
+    wrap(options.catch, function(err) {
+      if (err) return done(err);
+      next(sliced(arguments, 1));
+    })(err);
+  }
+
+  function next(v) {
     var fn = fns.shift();
     if (!fn) return done(null, v.length === 1 ? v[0] : v);
-    fn(v, next);
+    fn(v, response);
   }
 }
 
@@ -88,15 +130,17 @@ function series(pipeline, args, done) {
  * @return {Function}
  */
 
-function seed(v) {
-  var t = type(v);
+function seed(options) {
+  return function _seed(v) {
+    var t = type(v);
 
-  switch(t) {
-    case 'function': return resolve_function(v);
-    case 'object': return resolve(v);
-    case 'array': return resolve(v);
-    case 'vo': return resolve_vo(v);
-    default: return function(args, done) { return done() };
+    switch(t) {
+      case 'function': return resolve_function(v);
+      case 'object': return resolve(v, options);
+      case 'array': return resolve(v, options);
+      case 'vo': return resolve_vo(v);
+      default: return function(args, done) { return done() };
+    }
   }
 }
 
@@ -109,7 +153,10 @@ function seed(v) {
 
 function resolve_vo(vo) {
   return function _resolve_vo(args, done) {
-    return vo.apply(null, args.concat(done));
+    return vo.apply(null, args.concat(function(err) {
+      if (err) done.apply(null, [err].concat(args));
+      else done.apply(null, arguments);
+    }));
   }
 }
 
@@ -123,7 +170,10 @@ function resolve_vo(vo) {
 
 function resolve_function(fn) {
   return function _resolve_function(args, done) {
-    wrap(fn, done).apply(null, args);
+    wrap(fn, function(err) {
+      if (err) done.apply(null, [err].concat(args));
+      else done.apply(null, arguments);
+    }).apply(null, args);
   }
 }
 
@@ -134,7 +184,7 @@ function resolve_function(fn) {
  * @return {Function}
  */
 
-function resolve(obj) {
+function resolve(obj, options) {
   return function _resolve(args, done) {
     var parallel = {};
     var pending = 0;
@@ -169,12 +219,31 @@ function resolve(obj) {
     // make the requests
     foreach(parallel, function(v, k) {
       if (!v) return;
-      v(args, function(err) {
-        if (err) return done(err);
-        var ret = sliced(arguments, 1);
-        out[k] = ret.length === 1 ? ret[0] : ret;
+      v(args, response);
+
+      function response(err) {
+        if (err && options.catch) return caught.apply(null, arguments);
+        else if (err) return done(err);
+        next(sliced(arguments, 1));
+      }
+
+      function caught(err) {
+        err.upstream = sliced(arguments, 1);
+        wrap(options.catch, function(err) {
+          if (err) {
+            // TODO: fix up, right now prevents double onerror callbacks
+            err._skip = true;
+            return done(err);
+          }
+
+          next(sliced(arguments, 1));
+        })(err);
+      }
+
+      function next(args) {
+        out[k] = args.length === 1 ? args[0] : args;
         if (!--pending) return done(null, out);
-      });
+      }
     });
   }
 }

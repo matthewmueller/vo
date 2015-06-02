@@ -417,6 +417,235 @@ describe('composition: vo(vo(...), [vo(...), vo(...)])', function() {
   });
 })
 
+describe('vo.catch(fn)', function() {
+  it('should catch errors and continue', function(done) {
+    var called = false;
+    var e = null;
+
+    function a(one) {
+      assert.equal('one', one);
+      throw new Error('wtf!');
+    }
+
+    function b(v) {
+      assert.equal('no problem', v);
+      called = true;
+      return 'hi';
+    }
+
+    function onerror(err, fn) {
+      assert.deepEqual(['one', 'two'], err.upstream);
+      e = err.message;
+      return fn(null, 'no problem');
+    }
+
+    var vo = Vo(a, b).catch(onerror);
+    vo('one', 'two', function(err, v) {
+      assert.equal(true, called);
+      assert.equal('wtf!', e);
+      assert.equal('hi', v);
+      done();
+    })
+  })
+
+  it('should catch errors and be done', function(done) {
+    var called = false;
+    var e = null;
+
+    function a() {
+      throw new Error('wtf!');
+    }
+
+    function b(v) {
+      called = true;
+      return 'hi';
+    }
+
+    function onerror(err) {
+      e = err.message;
+      throw new Error('sky be fallin');
+    }
+
+    var vo = Vo(a, b).catch(onerror);
+    vo(function(err, v) {
+      assert.equal('sky be fallin', err.message)
+      assert.equal(false, called);
+      assert.equal('wtf!', e);
+      done();
+    })
+  })
+
+  it('should support catching in arrays', function(done) {
+    var called = false;
+    var e = null;
+
+    function a(one, two) {
+      assert.equal('one', one);
+      assert.equal('two', two);
+      throw new Error('wtf!');
+    }
+
+    function b(one, two) {
+      assert.equal('one', one);
+      assert.equal('two', two);
+      called = true;
+      return 'hi';
+    }
+
+    function onerror(err) {
+      assert.deepEqual(['one', 'two'], err.upstream);
+      e = err.message;
+      return 'jk';
+    }
+
+    var vo = Vo([a, b]).catch(onerror);
+    vo('one', 'two', function(err, v) {
+      assert.equal(true, called);
+      assert.equal('wtf!', e);
+      assert.deepEqual(['jk', 'hi'], v);
+      done();
+    });
+  })
+
+  it('should support catching in arrays and finishing', function(done) {
+    var called = false;
+    var e = null;
+
+    function a() {
+      throw new Error('wtf!');
+    }
+
+    function b() {
+      return 'hi';
+    }
+
+    function onerror(err) {
+      e = err.message;
+      throw new Error('sky be fallin');
+    }
+
+    var vo = Vo([a, b]).catch(onerror);
+    vo(function(err, v) {
+      assert.equal('sky be fallin', err.message);
+      assert.equal('wtf!', e);
+      done();
+    });
+  })
+
+  it('should support catching in objects', function(done) {
+    var called = false;
+    var e = null;
+
+    function a() {
+      throw new Error('wtf!');
+    }
+
+    function b() {
+      called = true;
+      return 'hi';
+    }
+
+    function onerror(err) {
+      e = err.message;
+      return 'jk';
+    }
+
+    var vo = Vo({ a: a, b: b }).catch(onerror);
+    vo(function(err, v) {
+      assert.equal(true, called);
+      assert.equal('wtf!', e);
+      assert.deepEqual({ a: 'jk', b: 'hi' }, v);
+      done();
+    });
+  })
+
+  it('should support catching in objects and finishing', function(done) {
+    var called = false;
+    var e = null;
+
+    function a() {
+      throw new Error('wtf!');
+    }
+
+    function b() {
+      return 'hi';
+    }
+
+    function onerror(err) {
+      e = err.message;
+      throw new Error('sky be fallin');
+    }
+
+    var vo = Vo({ a: a, b: b }).catch(onerror);
+    vo(function(err, v) {
+      assert.equal('sky be fallin', err.message);
+      assert.equal('wtf!', e);
+      done();
+    });
+  })
+
+  it('should support catching with composition', function(done) {
+    var called = false;
+
+    var a = Vo(function() {
+      throw new Error('oh noz')
+    }).catch(function (err) {
+      return 'a';
+    })
+
+    var b = Vo(function(a) {
+      called = true;
+      assert.equal('a', a);
+      throw new Error('zomg');
+    }).catch(function(err) {
+      assert.equal('a', err.upstream[0]);
+      return 'b';
+    })
+
+    var vo = Vo(a, b).catch(function(err) {
+      done(new Error('should not have been called'));
+    });
+
+    vo(function(err, v) {
+      if (err) return done(err);
+      assert.equal(true, called);
+      assert.equal('b', v);
+      done();
+    });
+  })
+
+  it('should support cascading error handling', function(done) {
+    var called = 0;
+
+    var a = Vo(function() {
+      throw new Error('oh noz')
+    }).catch(function (err) {
+      return 'a';
+    })
+
+    var b = Vo(function(a) {
+      called++;
+      assert.equal('a', a);
+      throw new Error('zomg');
+    }).catch(function(err) {
+      throw new Error('sky be fallin');
+    })
+
+    var vo = Vo(a, b).catch(function(err) {
+      called++;
+      assert.equal('sky be fallin', err.message);
+      return 'its okay';
+    });
+
+    vo(function(err, v) {
+      if (err) return done(err);
+      assert.equal(2, called);
+      assert.equal('its okay', v);
+      done();
+    });
+  })
+})
+
 /**
  * Timeout thunk
  *
