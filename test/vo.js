@@ -662,23 +662,37 @@ describe('vo.catch(fn)', function() {
 
 describe('vo.transform(boolean)', function() {
 
-  it('true should support transforms', function(done) {
+  it('transforms should support error handling middleware', function(done) {
+    var stack = [];
+
     function b (a) {
+      stack.push('b');
       assert.equal('a', a);
+      throw Error('zomg');
       return 'b';
     }
 
-    function c (b) {
-      assert.equal('b', b);
-      return 'c';
+    function c (a) {
+      stack.push('c');
     }
 
-    var vo = Vo(b, c)
-      .transform(true);
+    function d (err, a) {
+      stack.push('d');
+      console.log(err, a);
+      assert.equal('zomg', err.message);
+      assert.equal('a', a);
+      console.log('d');
+      return 'd';
+    }
+
+    var vo = Vo(b, c, d)
+      .transform(false);
 
     vo('a', function(err, v) {
+      console.log(stack);
       assert.ok(!err);
-      assert.equal('c', v);
+      assert.deepEqual(stack, ['b', 'd'])
+      assert.equal('d', v);
       done();
     });
   })

@@ -49,7 +49,7 @@ function Vo() {
     }
 
     function start(args, done) {
-      options.arity = options.fixed ? args.length : -1;
+      options.arity = options.fixed || !options.transform ? args.length : -1;
       series(pipeline, args, options, function(err, v) {
         if (err) return done(err);
         return done.apply(this, [null].concat(v));
@@ -125,9 +125,9 @@ function series(pipeline, args, options, done) {
       if (arity) {
         // loop over the rest of the functions,
         // to check if an 'err' parameter is first
-        do var fn = fns.shift();
-        while (fn && fn.original.length <= arity);
-
+        do {
+          var fn = fns.shift();
+        } while (fn && fn.original.length <= arity);
         // if so, call it
         if (fn) return next(arguments, fn);
       }
@@ -138,7 +138,8 @@ function series(pipeline, args, options, done) {
         return done (err);
       }
     } else {
-      next(sliced(arguments, 1, arity || arguments.length));
+      var params = options.transform ? sliced(arguments, 1, arity || arguments.length) : args;
+      next(params);
     }
   }
 
@@ -152,7 +153,6 @@ function series(pipeline, args, options, done) {
 
   function next(v, fn) {
     fn = fn || fns.shift();
-    if (!options.transform) v = args;
     if (!fn) return done(null, v);
     fn(v, response);
   }
