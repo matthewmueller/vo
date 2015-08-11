@@ -259,6 +259,19 @@ describe('arrays: vo([...])', function() {
       done();
     });
   });
+
+  it('should handle a single array', function(done) {
+    var vo = Vo(function(a) {
+      assert.deepEqual(a, [1, 2, 3])
+      return a;
+    })
+
+    vo([1, 2, 3], function(err, v) {
+      assert.ok(!err);
+      assert.deepEqual(v, [1, 2, 3])
+      done();
+    })
+  })
 });
 
 describe('objects: vo({...})', function() {
@@ -317,9 +330,10 @@ describe('composition: vo(vo(...), [vo(...), vo(...)])', function() {
       fn(null, 'b1', 'b2');
     }
 
-    function c(b) {
+    function c(b1, b2) {
       o.push('c');
-      assert.deepEqual(['b1', 'b2'], b);
+      assert.equal(b1, 'b1')
+      assert.equal(b2, 'b2')
       return promise_timeout(50, 'c');
     }
 
@@ -642,6 +656,205 @@ describe('vo.catch(fn)', function() {
       assert.equal(2, called);
       assert.equal('its okay', v);
       done();
+    });
+  })
+})
+
+describe('vo.transform(boolean)', function() {
+
+  it('true should support transforms', function(done) {
+    function b (a) {
+      assert.equal('a', a);
+      return 'b';
+    }
+
+    function c (b) {
+      assert.equal('b', b);
+      return 'c';
+    }
+
+    var vo = Vo(b, c)
+      .transform(true);
+
+    vo('a', function(err, v) {
+      assert.ok(!err);
+      assert.equal('c', v);
+      done();
+    });
+  })
+
+  it('false should disable transforms (middleware)', function(done) {
+    function b (a) {
+      assert.equal('a', a);
+      return 'b';
+    }
+
+    function c (a) {
+      assert.equal('a', a);
+      return 'c';
+    }
+
+    var vo = Vo(b, c)
+      .transform(false);
+
+    vo('a', function(err, v) {
+      assert.ok(!err);
+      assert.equal('a', v);
+      done()
+    });
+  })
+
+  it('should support middleware style control-flow', function(done) {
+    function b (req, res) {
+      req.url = 'http://mat.io';
+      res.status = 200;
+      return 'b';
+    }
+
+    function c (req, res) {
+      assert.equal(req.url, 'http://mat.io');
+      assert.equal(res.status, 200);
+      req.url = 'http://finbox.io';
+      res.status = 404;
+      return 'c';
+    }
+
+    var vo = Vo(b, c)
+      .transform(false);
+
+    vo({}, {}, function(err, req, res) {
+      assert.ok(!err);
+      assert.equal(req.url, 'http://finbox.io');
+      assert.equal(res.status, 404);
+      done();
+    });
+  })
+});
+
+describe('vo.fixed(boolean)', function() {
+  it('vo.fixed(true) should fix the number of possible arguments', function(done) {
+    function b (a, done) {
+      assert.equal('a', a);
+      done(null, 'b', 'c')
+      return 'b';
+    }
+
+    function c (b, done) {
+      assert.equal('b', b);
+      assert.equal('function', typeof done);
+      done(null, 'c', 'd')
+    }
+
+    var vo = Vo(b, c).fixed(true);
+
+    vo('a', function(err, c, d) {
+      assert.ok(!err);
+      assert.equal(2, arguments.length);
+      assert.equal(undefined, d);
+      assert.equal('c', c);
+      done();
+    });
+  })
+
+  it('vo.fixed(true) should support error handling middleware', function(done) {
+    var stack = [];
+
+    function b (a, done) {
+      stack.push('b');
+      assert.equal('a', a);
+      done(new Error('blow up'));
+    }
+
+    function c (b, done) {
+      stack.push('c');
+    }
+
+    function d (err, c, done) {
+      stack.push('d');
+      assert.equal(err.message, 'blow up');
+      done(null, 'd');
+    }
+
+    function e (d, done) {
+      stack.push('e');
+      assert.equal(d, 'd');
+      done(null, 'e', 'f');
+    }
+
+    var vo = Vo(b, c, d, e).fixed(true);
+
+    vo('a', function(err, e, f) {
+      assert.ok(!err);
+      assert.deepEqual(['b', 'd', 'e'], stack);
+      assert.equal(2, arguments.length);
+      assert.equal(undefined, f);
+      assert.equal('e', e);
+      done();
+    });
+  })
+
+  it('vo.fixed(true) should support error handling middleware that is rethrown and caught', function(done) {
+    var called = false;
+    var stack = [];
+
+    function b (a, done) {
+      stack.push('b');
+      assert.equal('a', a);
+      done(new Error('blow up'));
+    }
+
+    function c (b, done) {
+      stack.push('c');
+    }
+
+    function d (err, c, done) {
+      stack.push('d');
+      assert.equal(err.message, 'blow up');
+      done(err);
+    }
+
+    function e (d, done) {
+      stack.push('e');
+      assert.equal(d, 'd');
+      done(null, 'e', 'f');
+    }
+
+    var vo = Vo(b, c, d, e)
+      .fixed(true)
+      .catch(onerror)
+
+    function onerror(err) {
+      called = true;
+      assert.equal(err.message, 'blow up');
+    }
+
+    vo('a', function(err, e, f) {
+      assert.deepEqual(['b', 'd'], stack);
+      assert.equal(null, err);
+      assert.ok(called);
+      done();
+    });
+  })
+
+  it('vo.fixed(false) should allow for a variable number of arguments', function(done) {
+    function b (a, done) {
+      assert.equal('a', a);
+      done(null, 'b', 'b2')
+    }
+
+    function c (b, b2, done) {
+      assert.equal('b', b);
+      assert.equal('b2', b2);
+      done(null, 'c')
+    }
+
+    var vo = Vo(b, c)
+      .fixed(false);
+
+    vo('a', function(err, v) {
+      assert.ok(!err);
+      assert.equal('c', v);
+      done()
     });
   })
 })

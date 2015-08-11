@@ -28,7 +28,8 @@ function Vo() {
   var pipeline = sliced(arguments);
 
   var options = {
-    pipeline: true,
+    transform: true,
+    fixed: false,
     catch: false
   };
 
@@ -48,9 +49,10 @@ function Vo() {
     }
 
     function start(args, done) {
+      options.arity = options.fixed ? args.length : -1;
       series(pipeline, args, options, function(err, v) {
         if (err) return done(err);
-        return done(null, v);
+        return done.apply(this, [null].concat(v));
       });
     }
   }
@@ -68,16 +70,31 @@ function Vo() {
   }
 
   /**
-   * Pipeline/Middleware support
+   * Transform support
    *
    * @param {Boolean} pipeline
    * @return {Vo}
    */
 
-  vo.pipeline = function(pipeline) {
-    options.pipeline = !!pipeline;
+  vo.transform = function(transform) {
+    options.transform = !!transform;
     return vo;
   };
+
+  /**
+   * Fix the number of arguments
+   * you can pass in. Disabled
+   * by default
+   *
+   * @param {Boolean} fixed
+   * @return {Vo}
+   */
+
+  vo.fixed = function(fixed) {
+    options.fixed = !!fixed;
+    return vo;
+  };
+
 
   // TODO: would love to replace this
   // with "vo instanceof Vo"
@@ -95,30 +112,48 @@ function Vo() {
  */
 
 function series(pipeline, args, options, done) {
-  var pending = pipeline.length;
+  var arity = !!~options.arity && options.arity + 1;
   var fns = pipeline.map(seed(options));
+  var pending = pipeline.length;
   var first = fns.shift();
   var ret = [];
 
   first(args, response);
 
   function response(err) {
-    if (err && options.catch && !err._skip) return caught.apply(null, arguments);
-    else if (err) return done(err);
-    next(sliced(arguments, 1));
+    if (err) {
+      if (arity) {
+        // loop over the rest of the functions,
+        // to check if an 'err' parameter is first
+        do var fn = fns.shift();
+        while (fn && fn.original.length <= arity);
+
+        // if so, call it
+        if (fn) return next(arguments, fn);
+      }
+
+      if (options.catch && !err._skip) {
+        return caught.apply(null, arguments);
+      } else {
+        return done (err);
+      }
+    } else {
+      next(sliced(arguments, 1, arity || arguments.length));
+    }
   }
 
   function caught(err) {
     err.upstream = sliced(arguments, 1);
     wrap(options.catch, function(err) {
       if (err) return done(err);
-      next(sliced(arguments, 1));
+      next(sliced(arguments, 1, arity || arguments.length));
     })(err);
   }
 
-  function next(v) {
-    var fn = fns.shift();
-    if (!fn) return done(null, v.length === 1 ? v[0] : v);
+  function next(v, fn) {
+    fn = fn || fns.shift();
+    if (!options.transform) v = args;
+    if (!fn) return done(null, v);
     fn(v, response);
   }
 }
@@ -169,12 +204,17 @@ function resolve_vo(vo) {
  */
 
 function resolve_function(fn) {
-  return function _resolve_function(args, done) {
+  function _resolve_function(args, done) {
     wrap(fn, function(err) {
       if (err) done.apply(null, [err].concat(args));
       else done.apply(null, arguments);
     }).apply(null, args);
   }
+
+  // point to wrapped fn
+  _resolve_function.original = fn;
+
+  return _resolve_function;
 }
 
 /**
