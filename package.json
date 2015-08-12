@@ -18,7 +18,8 @@
   "dependencies": {
     "foreach": "^2.0.5",
     "sliced": "0.0.5",
-    "wrap-fn": "^0.1.4"
+    "wrap-fn": "^0.1.4",
+    "wrapped": "^1.0.0"
   },
   "devDependencies": {
     "browserify": "^9.0.8",

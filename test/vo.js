@@ -10,6 +10,17 @@ var Vo = require('..');
  * Tests
  */
 
+describe('vo()', function() {
+  it('should work with no function', function(done) {
+    Vo()('a', 'b', function(err, a, b) {
+      assert.ok(!err);
+      assert.equal('a', a);
+      assert.equal('b', b);
+      done();
+    })
+  })
+})
+
 describe('sync functions: vo(fn)', function() {
   it('should work with synchronous functions', function(done) {
     function sync(a, b) {
@@ -448,7 +459,7 @@ describe('vo.catch(fn)', function() {
     }
 
     function onerror(err, fn) {
-      assert.deepEqual(['one', 'two'], err.upstream);
+      assert.deepEqual(['one', 'two'], this.arguments);
       e = err.message;
       return fn(null, 'no problem');
     }
@@ -507,7 +518,7 @@ describe('vo.catch(fn)', function() {
     }
 
     function onerror(err) {
-      assert.deepEqual(['one', 'two'], err.upstream);
+      assert.deepEqual(['one', 'two'], this.arguments);
       e = err.message;
       return 'jk';
     }
@@ -612,7 +623,7 @@ describe('vo.catch(fn)', function() {
       assert.equal('a', a);
       throw new Error('zomg');
     }).catch(function(err) {
-      assert.equal('a', err.upstream[0]);
+      assert.equal('a', this.arguments[0]);
       return 'b';
     })
 
