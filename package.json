@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "foreach": "^2.0.5",
+    "is-generator": "^1.0.2",
     "sliced": "0.0.5",
     "wrap-fn": "^0.1.4",
     "wrapped": "^1.0.0"
