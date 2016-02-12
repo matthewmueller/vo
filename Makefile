@@ -1,7 +1,7 @@
 
 test: install
 	@./node_modules/.bin/mocha \
-		--harmony-generators \
+		--require co-mocha \
 		--reporter spec
 
 install:
