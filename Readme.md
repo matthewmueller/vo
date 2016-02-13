@@ -1,28 +1,27 @@
 
 ![img](https://cldup.com/GbKb42jNdt.png)
 
-Vo is a control flow library for minimalists. At less than 200 lines of code, Vo is similar in spirit to [co()](https://github.com/visionmedia/co), but is useful outside the context of generators.
+Vo is a control flow library for minimalists.
 
 ## Features
 
-- Supports synchronous & asynchronous functions, generators and promises.
-- Composable & catches errors
+- Seamlessly supports promises, generators, synchronous & asynchronous functions.
+- Vo instances are composable with each other, allowing you to coordinate complex tasks simply
+- Supports both middleware and pipeline task flow
+- Easily catch and fix errors anywhere in the pipeline
+- Returns a promise that you can yield on or "await"
 - Tiny (4kb minified + gzip)
 - Browser & server support
-- Backwards compatible with co
-- Well-tested (see below)
-
-## When to use Vo
-
-- You want the benefits of promises (composability & error handling) but just wanted to use regular functions or existing APIs.
-- You want to use the control flow goodies of co but you cannot or do not want to use generators or wrapped APIs.
-- You just want a simple and concise API for control flow.
+- Well-tested
 
 ## Installation
 
 - Node.js or Browserify: `npm install vo`
-- Duo & Component compatible
 - Standalone: [vo.js](dist/vo.js) & [vo.min](dist/vo.min.js)
+
+## Migration from 1.x to 2.x
+
+2.x is a complete re-write of vo and is not backwards compatible with 1.x. In the first version return values were passed on to the next function by default. In this version the default uses fixed arguments you pass in when you call vo. This is how middleware works in libraries like express and koa. You can pipeline your results by calling `vo.pipeline(...)` to achieve the same results as 1.x.
 
 ## Getting Started
 
@@ -57,11 +56,11 @@ vo(function *(url) {
 ##### And here's how you'd use promises:
 
 ```js
-var request = require('superagent-promise');
+var request = require('superagent');
 var vo = require('vo');
 
 vo(function(url) {
-  return request('get', url).end();
+  return request('get', url);
 })('http://lapwinglabs.com', function(err, res) {
   // ...
 })
@@ -87,13 +86,12 @@ function *cache(url, body) {
   return yield db.put(url, body);
 }
 
-vo(get, cache)('http://lapwinglabs.com', function(err) {
+vo.pipeline(get, cache)('http://lapwinglabs.com', function(err) {
   // ...
 })
 ```
 
-> Arguments from the previous function get passed to
-> the next function.
+> If you have an array, you can use `vo.pipeline.call(series)` to run that array in series.
 
 ##### And this is how you'd run a set of tasks in parallel:
 
@@ -201,58 +199,8 @@ You can also make use of `err.upstream` to read the arguments passed into the fu
 We have a comprehensive test suite. Here's how you run it:
 
 ```
+npm install
 make test
-```
-
-And here's what we test for:
-
-```
-  sync functions: vo(fn)
-    ✓ should work with synchronous functions
-    ✓ should catch thrown errors
-
-  async functions: vo(fn)
-    ✓ should work with asynchronous functions
-    ✓ should handle errors
-
-  generators: vo(*fn)
-    ✓ should work with generators (58ms)
-    ✓ should catch thrown errors
-
-  promises: vo(promise)
-    ✓ should work with promises (55ms)
-    ✓ should handle errors
-
-  thunks: vo(fn)(args, ...)(fn)
-    ✓ should support thunks
-
-  series: vo(fn, ...)
-    ✓ should run in series (108ms)
-    ✓ should handle errors
-
-  arrays: vo([...])
-    ✓ should run an array of functions in parallel (155ms)
-    ✓ should handle errors
-
-  objects: vo({...})
-    ✓ should run an object of functions in parallel (154ms)
-    ✓ should catch any errors
-
-  composition: vo(vo(...), [vo(...), vo(...)])
-    ✓ should support series composition (105ms)
-    ✓ should support async composition (205ms)
-    ✓ should support async composition with objects (204ms)
-    ✓ should propagate errors
-
-  vo.catch(fn)
-    ✓ should catch errors and continue
-    ✓ should catch errors and be done
-    ✓ should support catching in arrays
-    ✓ should support catching in arrays and finishing
-    ✓ should support catching in objects
-    ✓ should support catching in objects and finishing
-    ✓ should support catching with composition
-    ✓ should support cascading error handling
 ```
 
 ## License

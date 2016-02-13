@@ -1,18 +1,22 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict'
+
 /**
  * Module Dependencies
  */
 
-var sliced = require('sliced');
-var wrap = require('wrap-fn');
-var isArray = Array.isArray;
-var keys = Object.keys;
+var Pipeline = require('./lib/pipeline')
+var Series = require('./lib/series')
+var sliced = require('sliced')
+var isArray = Array.isArray
+var noop = function () {}
+var keys = Object.keys
 
 /**
  * Module Exports
  */
 
-module.exports = Vo;
+module.exports = Vo
 
 /**
  * Initialize a `Vo` instance
@@ -22,210 +26,322 @@ module.exports = Vo;
  */
 
 function Vo() {
-  var pipeline = sliced(arguments);
+  var series = isArray(this) ? sliced(this) : sliced(arguments)
 
-  function vo() {
-    var args = sliced(arguments);
-    var last = args[args.length - 1];
-
-    // TODO: thunk support
-    var done = 'function' == typeof last
-      ? args.pop()
-      : function() {};
-
-    series(pipeline, args, function(err, v) {
-      if (err) return done(err);
-      return done(null, v);
-    });
-  }
-
-  // TODO: would love to replace this
-  // with "vo instanceof Vo"
-  vo.vo = true;
-
-  return vo;
+  // run vo
+  return run(function (context, args, done) {
+    Series(series, context, args, function(err) {
+      if (err) return done.call(context, err)
+      return done.apply(context, [null].concat(args))
+    })
+  })
 }
 
 /**
- * Run the array in series
+ * Pipeline the functions
  *
- * @param {Array} pipeline
- * @param {Array} args
- * @param {Function} done
- */
-
-function series(pipeline, args, done) {
-  var pending = pipeline.length;
-  var fns = pipeline.map(seed);
-  var first = fns.shift();
-  var ret = [];
-
-  first(args, next);
-
-  function next(err) {
-    if (err) return done(err);
-    var v = sliced(arguments, 1);
-    var fn = fns.shift();
-    if (!fn) return done(null, v.length == 1 ? v[0] : v);
-    fn(v, next);
-  }
-}
-
-/**
- * Seed the initial values
- *
- * @param {Mixed} v
+ * @param {Mixed}
  * @return {Function}
  */
 
-function seed(v) {
-  var t = type(v);
+Vo.pipeline = function pipeline () {
+  var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
 
-  switch(t) {
-    case 'function': return resolve_function(v);
-    case 'object': return resolve_object(v);
-    case 'array': return resolve_array(v);
-    case 'vo': return resolve_vo(v);
-    default: return function(args, done) { return done() };
+  // run the pipeline
+  return run(function (context, args, done) {
+    Pipeline(pipeline, context, args, function(err, v) {
+      if (err) return done(err)
+      return done.apply(this, [null].concat(v))
+    })
+  })
+}
+
+/**
+ * Simple wrapper that will allow us
+ * to switch between fixed arguments
+ * and transform pipelines
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+function run (fn) {
+  function vo () {
+    var args = sliced(arguments)
+    var last = args[args.length - 1]
+    var context = this
+
+    if (typeof last === 'function') {
+      var done = args.pop()
+      fn(context, args, done)
+    } else {
+      // return a promise
+      return new Promise(function (success, failure) {
+        fn(context, args, function(err, ret) {
+          if (arguments.length > 2) ret = sliced(arguments, 1)
+          return err ? failure(err) : success(ret)
+        })
+      })
+    }
+  }
+
+  // with "vo instanceof Vo"
+  vo.vo = true
+
+  return vo
+}
+
+/**
+ * Catch errors
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+Vo.catch = function (fn) {
+  // simple wrapper to avoid attaching to the passed-in function
+  function catcher () { return fn }
+  catcher.catch = true
+  return catcher
+}
+
+},{"./lib/pipeline":3,"./lib/series":4,"sliced":6}],2:[function(require,module,exports){
+/**
+ * Module Dependencies
+ */
+
+var wrapped = require('wrapped')
+var type = require('./type')
+var keys = Object.keys
+
+/**
+ * Export `compile`
+ */
+
+module.exports = compile
+
+/**
+ * Compile
+ */
+
+function compile (mixed) {
+  switch (type(mixed)) {
+    case 'function': return Func(mixed)
+    case 'object': return object(mixed)
+    case 'catch': return Catcher(mixed)
+    case 'array': return array(mixed)
+    case 'vo': return Vo(mixed)
+    default: return identity
   }
 }
 
 /**
- * Resolve an inner `Vo` instance
+ * Wrap functions
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+function Func (fn) {
+  return function func (args, done) {
+    wrapped(fn).apply(this, args.concat(done))
+  }
+}
+
+/**
+ * Wrap Objects
+ *
+ * @param {Object|Array} iterable
+ * @return {Function}
+ */
+
+function object (o) {
+  // compile the object
+  o = keys(o).reduce(function (o, k) {
+    o[k] = compile(o[k])
+    return o
+  }, o)
+
+  return function obj (args, done) {
+    var pending = keys(o).length
+    var out = {}
+
+    keys(o).map(function(k, i) {
+      o[k](args, function(err, args) {
+        if (err) return done(err, out)
+        out[k] = args
+        if (!--pending) return done(null, out)
+      })
+    })
+  }
+}
+
+/**
+ * Wrap Arrays
+ */
+
+function array (a) {
+  a = a.map(compile)
+
+  return function arr (args, done) {
+    var pending = a.length
+    var out = []
+
+    // run in parallel
+    a.map(function (fn, i) {
+      fn(args, function(err, args) {
+        if (err) return done(err, out)
+        out[i] = args
+        if (!--pending) return done(null, out)
+      })
+    })
+  }
+}
+
+/**
+ * Wrap vo
  *
  * @param {Vo} vo
  * @return {Function}
  */
 
-function resolve_vo(vo) {
-  return function _resolve_vo(args, done) {
-    return vo.apply(null, args.concat(done));
+function Vo (v) {
+  return function vo (args, done) {
+    return v.apply(null, args.concat(function(err, v) {
+      if (err) return done(err)
+      return done.apply(null, arguments)
+    }))
   }
 }
 
 /**
- * Resolve a function (sync or async),
- * generator, or promise
+ * Catcher
  *
- * @param {Function|Generator|Promise} fn
+ * @param {Function} fn
  * @return {Function}
  */
 
-function resolve_function(fn) {
-  return function _resolve_function(args, done) {
-    wrap(fn, done).apply(null, args);
+function Catcher(fn) {
+  return function catcher (err, args, done) {
+    return wrapped(fn()).apply(this, [err].concat(args).concat(done))
   }
 }
 
 /**
- * Resolve an object recursively
+ * Identity
  *
- * @param {Object} obj
- * @return {Function}
+ * @param {Array} args
+ * @param {Function} done
  */
 
-function resolve_object(obj) {
-  return function _resolve_object(args, done) {
-    var parallel = {};
-    var pending = 0;
-    var out = {};
-
-    // map out the parallel functions first
-    keys(obj).forEach(function(k) {
-      var v = obj[k];
-      var t = type(v);
-
-      switch(t) {
-        case 'function':
-          parallel[k] = resolve_function(v);
-          pending++;
-          break;
-        case 'array':
-          parallel[k] = resolve_array(v);
-          pending++;
-          break;
-        case 'object':
-          parallel[k] = resolve_object(v);
-          pending++;
-          break;
-        case 'vo':
-          parallel[k] = resolve_vo(v);
-          pending++;
-          break;
-        default:
-          out[k] = v;
-      }
-
-    });
-
-    // make the requests
-    keys(parallel).forEach(function(k) {
-      var v = parallel[k];
-      if (!v) return;
-      v(args, function(err) {
-        if (err) return done(err);
-        var ret = sliced(arguments, 1);
-        out[k] = ret.length == 1 ? ret[0] : ret;
-        if (!--pending) return done(null, out);
-      });
-    });
-  }
+function identity (args, done) {
+  return done(null, args)
 }
+
+
+},{"./type":5,"wrapped":7}],3:[function(require,module,exports){
+/**
+ * Module Dependencies
+ */
+
+var compile = require('./compile')
+var sliced = require('sliced')
 
 /**
- * Resolve an array recursively
- *
- * @param {Array} arr
- * @return {Function}
+ * Export `Pipeline`
  */
 
-function resolve_array(arr) {
-  return function _resolve_array(args, done) {
-    var parallel = [];
-    var pending = 0;
-    var out = [];
+module.exports = Pipeline
 
-    // map out the parallel functions first
-    arr.forEach(function(v, k) {
-      var t = type(v);
-      var v = arr[k];
+/**
+ * Initialize `Pipeline`
+ *
+ * @param {Array} series array of functions
+ * @param {Array} args
+ * @param {Function} done
+ */
 
-      switch(t) {
-        case 'function':
-          parallel[k] = resolve_function(v);
-          pending++;
-          break;
-        case 'array':
-          parallel[k] = resolve_array(v);
-          pending++;
-          break;
-        case 'object':
-          parallel[k] = resolve_object(v);
-          pending++;
-          break;
-        case 'vo':
-          parallel[k] = resolve_vo(v);
-          pending++;
-          break;
-        default:
-          out[k] = v;
-      }
-    });
+function Pipeline (pipeline, context, args, done) {
+  pipeline = pipeline.map(compile)
 
-    // make the parallel requests
-    parallel.forEach(function(v, i) {
-      if (!v) return;
-      v(args, function(err) {
-        if (err) return done(err);
-        var ret = sliced(arguments, 1);
-        out[i] = ret.length == 1 ? ret[0] : ret;
-        if (!--pending) {
-          return done(null, out);
-        }
-      });
-    });
+  // run in series
+  function next (err) {
+    if (err) return error(err, sliced(arguments, 1))
+    var fn = pipeline.shift()
+    while (fn && fn.length !== 2) fn = pipeline.shift()
+    if (!fn) return done.call(context, null, sliced(arguments, 1))
+    fn.call(context, sliced(arguments, 1), next)
   }
+
+  // error handling
+  function error (err, args) {
+    var fn = pipeline.shift()
+    while (fn && fn.length !== 3) fn = pipeline.shift()
+    if (fn) return fn.call(context, err, args, next)
+    else return done.call(context, err)
+  }
+
+  // kick us off
+  next.apply(null, [null].concat(args))
 }
+
+},{"./compile":2,"sliced":6}],4:[function(require,module,exports){
+/**
+ * Module Dependencies
+ */
+
+var compile = require('./compile')
+
+/**
+ * Export `Series`
+ */
+
+module.exports = Series
+
+/**
+ * Initialize `Series`
+ *
+ * @param {Array} series array of functions
+ * @param {Array} args
+ * @param {Function} done
+ */
+
+function Series (series, context, args, done) {
+  series = series.map(compile)
+
+  // run in series
+  function next (err) {
+    if (err) return error(err)
+    var fn = series.shift()
+    while (fn && fn.length !== 2) fn = series.shift()
+    if (!fn) return done.call(context, null, args)
+    fn.call(context, args, next)
+  }
+
+  // error handling
+  function error (err) {
+    var fn = series.shift()
+    while (fn && fn.length !== 3) fn = series.shift()
+    if (fn) return fn.call(context, err, args, next)
+    else return done.call(context, err)
+  }
+
+  // kick us off
+  next()
+}
+
+},{"./compile":2}],5:[function(require,module,exports){
+/**
+ * Module dependencies
+ */
+
+var isArray = Array.isArray
+
+/**
+ * Export `type`
+ */
+
+module.exports = type
 
 /**
  * Get the type
@@ -237,15 +353,14 @@ function resolve_array(arr) {
 function type(v) {
   return isArray(v)
     ? 'array'
-    : v.vo
+    : v && v.vo
     ? 'vo'
-    : typeof v;
+    : v && v.catch
+    ? 'catch'
+    : typeof v
 }
 
-},{"sliced":2,"wrap-fn":4}],2:[function(require,module,exports){
-module.exports = exports = require('./lib/sliced');
-
-},{"./lib/sliced":3}],3:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 
 /**
  * An Array.prototype.slice.call(arguments) alternative
@@ -280,43 +395,40 @@ module.exports = function (args, slice, sliceEnd) {
 }
 
 
-},{}],4:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /**
  * Module Dependencies
  */
 
+var sliced = require('sliced');
 var noop = function(){};
 var co = require('co');
 
 /**
- * Export `wrap-fn`
+ * Export `wrapped`
  */
 
-module.exports = wrap;
+module.exports = wrapped;
 
 /**
  * Wrap a function to support
  * sync, async, and gen functions.
  *
  * @param {Function} fn
- * @param {Function} done
  * @return {Function}
  * @api public
  */
 
-function wrap(fn, done) {
-  done = once(done || noop);
-
-  return function() {
-    // prevents arguments leakage
-    // see https://github.com/petkaantonov/bluebird/wiki/Optimization-killers#3-managing-arguments
-    var i = arguments.length;
-    var args = new Array(i);
-    while (i--) args[i] = arguments[i];
-
+function wrapped(fn) {
+  function wrap() {
+    var args = sliced(arguments);
+    var last = args[args.length - 1];
     var ctx = this;
 
     // done
+    var done = typeof last == 'function' ? args.pop() : noop;
+
+    // nothing
     if (!fn) {
       return done.apply(ctx, [null].concat(args));
     }
@@ -339,6 +451,8 @@ function wrap(fn, done) {
     // sync
     return sync(fn, done).apply(ctx, args);
   }
+
+  return wrap;
 }
 
 /**
@@ -396,6 +510,10 @@ function promise(value) {
 }
 
 /**
+ * Determi
+ */
+
+/**
  * Once
  */
 
@@ -407,7 +525,7 @@ function once(fn) {
   };
 }
 
-},{"co":5}],5:[function(require,module,exports){
+},{"co":8,"sliced":6}],8:[function(require,module,exports){
 
 /**
  * slice() reference.
