@@ -16,17 +16,12 @@
     "url": "git://github.com/lapwinglabs/vo.git"
   },
   "dependencies": {
-    "foreach": "^2.0.5",
-    "is-generator": "^1.0.2",
-    "sliced": "0.0.5",
-    "wrap-fn": "^0.1.4",
+    "sliced": "^1.0.1",
     "wrapped": "^1.0.0"
   },
   "devDependencies": {
-    "browserify": "^9.0.8",
     "co-mocha": "^1.1.2",
-    "es6-promise": "^2.1.1",
-    "mocha": "*"
+    "mocha": "^2.4.5"
   },
   "main": "index"
 }

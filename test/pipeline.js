@@ -2,7 +2,6 @@
  * Module Dependencies
  */
 
-var Promise = require('es6-promise').Promise;
 var assert = require('assert');
 var Vo = require('..');
 
@@ -506,6 +505,56 @@ describe('pipeline', function() {
         done();
       });
     });
+  })
+
+  describe('working with vo()', function() {
+    it('should also work with vo', function() {
+      function a (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        return 'd'
+      }
+
+      function b (d) {
+        assert.equal(d, 'd')
+        return 'b'
+      }
+
+      function c (d) {
+        assert.equal(d, 'd')
+        return 'c'
+      }
+
+      return Vo.pipeline(a, Vo(b, c))('a', 'b')
+        .then(function (v) {
+          assert.deepEqual(v, 'd')
+        })
+    })
+
+    it('should also work with vo first arg', function() {
+      function a (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        return 'd'
+      }
+
+      function b (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        return 'b'
+      }
+
+      function c (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        return 'c'
+      }
+
+      return Vo.pipeline(Vo(a, b), c)('a', 'b')
+        .then(function (v) {
+          assert.deepEqual(v, 'c')
+        })
+    })
   })
 });
 

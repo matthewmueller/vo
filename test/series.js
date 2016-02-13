@@ -2,7 +2,6 @@
  * Module Dependencies
  */
 
-var Promise = require('es6-promise').Promise;
 var assert = require('assert');
 var Vo = require('..');
 

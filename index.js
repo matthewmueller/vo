@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 /**
  * Module Dependencies
@@ -6,18 +6,16 @@
 
 var Pipeline = require('./lib/pipeline')
 var Series = require('./lib/series')
-var wrapped = require('wrapped');
-var foreach = require('foreach');
-var sliced = require('sliced');
-var isArray = Array.isArray;
-var noop = function () {};
-var keys = Object.keys;
+var sliced = require('sliced')
+var isArray = Array.isArray
+var noop = function () {}
+var keys = Object.keys
 
 /**
  * Module Exports
  */
 
-module.exports = Vo;
+module.exports = Vo
 
 /**
  * Initialize a `Vo` instance
@@ -27,38 +25,15 @@ module.exports = Vo;
  */
 
 function Vo() {
-  var series = isArray(this) ? sliced(this) : sliced(arguments);
+  var series = isArray(this) ? sliced(this) : sliced(arguments)
 
-  function vo() {
-    var args = sliced(arguments);
-    var last = args[args.length - 1]
-    var context = this
-
-    if (typeof last === 'function') {
-      var done = args.pop();
-      start(args, done);
-    } else {
-      // return a promise
-      return new Promise(function (success, failure) {
-        start(args, function(err, ret) {
-          if (arguments.length > 2) ret = sliced(arguments, 1)
-          return err ? failure(err) : success(ret)
-        })
-      })
-    }
-
-    function start(args, done) {
-      Series(series, context, args, function(err) {
-        if (err) return done.call(context, err);
-        return done.apply(context, [null].concat(args));
-      });
-    }
-  }
-
-  // with "vo instanceof Vo"
-  vo.vo = true;
-
-  return vo;
+  // run vo
+  return run(function (context, args, done) {
+    Series(series, context, args, function(err) {
+      if (err) return done.call(context, err)
+      return done.apply(context, [null].concat(args))
+    })
+  })
 }
 
 /**
@@ -69,30 +44,43 @@ function Vo() {
  */
 
 Vo.pipeline = function pipeline () {
-  var pipeline = isArray(this) ? sliced(this) : sliced(arguments);
+  var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
 
+  // run the pipeline
+  return run(function (context, args, done) {
+    Pipeline(pipeline, context, args, function(err, v) {
+      if (err) return done(err)
+      return done.apply(this, [null].concat(v))
+    })
+  })
+}
+
+/**
+ * Simple wrapper that will allow us
+ * to switch between fixed arguments
+ * and transform pipelines
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+function run (fn) {
   function vo () {
-    var args = sliced(arguments);
-    var last = args[args.length - 1];
+    var args = sliced(arguments)
+    var last = args[args.length - 1]
     var context = this
 
     if (typeof last === 'function') {
-      var done = args.pop();
-      start(args, done);
+      var done = args.pop()
+      fn(context, args, done)
     } else {
       // return a promise
       return new Promise(function (success, failure) {
-        start(args, function(err, value) {
-          return err ? failure(err) : success(value)
+        fn(context, args, function(err, ret) {
+          if (arguments.length > 2) ret = sliced(arguments, 1)
+          return err ? failure(err) : success(ret)
         })
       })
-    }
-
-    function start(args, done) {
-      Pipeline(pipeline, context, args, function(err, v) {
-        if (err) return done(err);
-        return done.apply(this, [null].concat(v));
-      });
     }
   }
 
@@ -110,5 +98,8 @@ Vo.pipeline = function pipeline () {
  */
 
 Vo.catch = function (fn) {
-
+  // simple wrapper to avoid attaching to the passed-in function
+  function catcher () { return fn }
+  catcher.catch = true
+  return catcher
 }
