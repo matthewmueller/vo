@@ -8,9 +8,9 @@ install:
 	@npm install
 	@touch node_modules
 
-dist: install dist-build dist-minify
+dist: dist-build dist-minify
 
-dist-build:
+dist-build: clean install
 	@mkdir -p dist
 	@./node_modules/.bin/browserify index.js -o dist/vo.js
 
@@ -23,5 +23,8 @@ dist-minify: dist/vo.js
 		http://marijnhaverbeke.nl/uglifyjs \
 		> $<.tmp
 	@mv $<.tmp dist/vo.min.js
+
+clean:
+	@rm -rf node_modules
 
 .PHONY: test
