@@ -1,4 +1,489 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict'
+
+/**
+ * Module Dependencies
+ */
+
+var Pipeline = require('./lib/pipeline')
+var Stack = require('./lib/stack')
+var sliced = require('sliced')
+var isArray = Array.isArray
+var noop = function () {}
+var keys = Object.keys
+
+/**
+ * Module Exports
+ */
+
+module.exports = Vo
+
+/**
+ * Initialize a `Vo` instance
+ *
+ * @param {Array|Object|Function, ...}
+ * @return {Function}
+ */
+
+function Vo() {
+  var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
+
+  // run vo
+  return run(function (context, args, done) {
+    Pipeline(pipeline, context, args, function(err, args) {
+      if (err) return done.call(context, err)
+      return done.apply(context, [null].concat(args))
+    })
+  })
+}
+
+/**
+ * Pipeline the functions
+ *
+ * @param {Mixed}
+ * @return {Function}
+ */
+
+Vo.stack = function stack () {
+  var stack = isArray(this) ? sliced(this) : sliced(arguments)
+
+  // run the stack
+  return run(function (context, args, done) {
+    Stack(stack, context, args, function(err, v) {
+      if (err) return done(err)
+      return done.apply(this, [null].concat(v))
+    })
+  })
+}
+
+/**
+ * Simple wrapper that will allow us
+ * to switch between fixed arguments
+ * and transform pipelines
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+function run (fn) {
+  function vo () {
+    var args = sliced(arguments)
+    var last = args[args.length - 1]
+    var context = this
+
+    if (typeof last === 'function') {
+      var done = args.pop()
+      fn(context, args, done)
+    } else {
+      // return a promise
+      return new Promise(function (success, failure) {
+        fn(context, args, function(err, ret) {
+          if (arguments.length > 2) ret = sliced(arguments, 1)
+          return err ? failure(err) : success(ret)
+        })
+      })
+    }
+  }
+
+  // with "vo instanceof Vo"
+  vo.vo = true
+
+  return vo
+}
+
+/**
+ * Catch errors
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+Vo.catch = function (fn) {
+  // simple wrapper to avoid attaching to the passed-in function
+  function catcher () { return fn }
+  catcher.catch = true
+  return catcher
+}
+
+},{"./lib/pipeline":3,"./lib/stack":4,"sliced":10}],2:[function(require,module,exports){
+/**
+ * Module Dependencies
+ */
+
+var compact = require('lodash.compact')
+var error = require('err-candy')
+var wrapped = require('wrapped')
+var type = require('./type')
+var keys = Object.keys
+
+/**
+ * Export `compile`
+ */
+
+module.exports = compile
+
+/**
+ * Compile
+ */
+
+function compile (mixed) {
+  switch (type(mixed)) {
+    case 'function': return Func(mixed)
+    case 'object': return object(mixed)
+    case 'catch': return Catcher(mixed)
+    case 'array': return array(mixed)
+    case 'vo': return Vo(mixed)
+    default: return identity
+  }
+}
+
+/**
+ * Wrap functions
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+function Func (fn) {
+  return function func (args, done) {
+    wrapped(fn).apply(this, args.concat(next))
+
+    function next(err) {
+      if (err) return done(error(err))
+      return done.apply(null, arguments)
+    }
+  }
+}
+
+/**
+ * Wrap Objects
+ *
+ * @param {Object|Array} iterable
+ * @return {Function}
+ */
+
+function object (o) {
+  // compile the object
+  o = keys(o).reduce(function (o, k) {
+    o[k] = compile(o[k])
+    return o
+  }, o)
+
+  return function obj (args, done) {
+    var pending = keys(o).length
+    var context = this
+    var errors = []
+    var out = {}
+
+    keys(o).map(function(k, i) {
+      o[k].call(context, args, function(err, args) {
+        if (err) {
+          errors[i] = err
+          out[k] = err
+        } else {
+          out[k] = args
+        }
+
+        if (!--pending) {
+          errors = compact(errors)
+          return errors.length
+            ? done(error(errors), out)
+            : done(null, out)
+        }
+      })
+    })
+  }
+}
+
+/**
+ * Wrap Arrays
+ */
+
+function array (a) {
+  a = a.map(compile)
+
+  return function arr (args, done) {
+    var pending = a.length
+    var context = this
+    var errors = []
+    var out = []
+
+    // run in parallel
+    a.map(function (fn, i) {
+      fn.call(context, args, function(err, args) {
+        if (err) {
+          errors[i] = err
+          out[i] = err
+        } else {
+          out[i] = args
+        }
+
+        if (!--pending) {
+          errors = compact(errors)
+          return errors.length
+            ? done(error(errors), out)
+            : done(null, out)
+        }
+      })
+    })
+  }
+}
+
+/**
+ * Wrap vo
+ *
+ * @param {Vo} vo
+ * @return {Function}
+ */
+
+function Vo (v) {
+  return function vo (args, done) {
+    return v.apply(this, args.concat(function(err, v) {
+      if (err) return done(error(err))
+      return done.apply(null, arguments)
+    }))
+  }
+}
+
+/**
+ * Catcher
+ *
+ * @param {Function} fn
+ * @return {Function}
+ */
+
+function Catcher(fn) {
+  return function catcher (err, args, done) {
+    return wrapped(fn()).apply(this, [err].concat(args).concat(done))
+  }
+}
+
+/**
+ * Identity
+ *
+ * @param {Array} args
+ * @param {Function} done
+ */
+
+function identity (args, done) {
+  return done(null, args)
+}
+
+},{"./type":5,"err-candy":7,"lodash.compact":9,"wrapped":11}],3:[function(require,module,exports){
+/**
+ * Module Dependencies
+ */
+
+var compile = require('./compile')
+var sliced = require('sliced')
+
+/**
+ * Export `Pipeline`
+ */
+
+module.exports = Pipeline
+
+/**
+ * Initialize `Pipeline`
+ *
+ * @param {Array} series array of functions
+ * @param {Array} args
+ * @param {Function} done
+ */
+
+function Pipeline (pipeline, context, args, done) {
+  pipeline = pipeline.map(compile)
+
+  // run in series
+  function next (err) {
+    if (err) return error(err, sliced(arguments, 1))
+    var fn = pipeline.shift()
+    while (fn && fn.length !== 2) fn = pipeline.shift()
+    if (!fn) return done.call(context, null, sliced(arguments, 1))
+    fn.call(context, sliced(arguments, 1), next)
+  }
+
+  // error handling
+  function error (err, args) {
+    var fn = pipeline.shift()
+    while (fn && fn.length !== 3) fn = pipeline.shift()
+    if (fn) return fn.call(context, err, args, next)
+    else return done.call(context, err)
+  }
+
+  // kick us off
+  next.apply(null, [null].concat(args))
+}
+
+},{"./compile":2,"sliced":10}],4:[function(require,module,exports){
+/**
+ * Module Dependencies
+ */
+
+var compile = require('./compile')
+
+/**
+ * Export `Stack`
+ */
+
+module.exports = Stack
+
+/**
+ * Initialize `Stack`
+ *
+ * @param {Array} series array of functions
+ * @param {Array} args
+ * @param {Function} done
+ */
+
+function Stack (stack, context, args, done) {
+  stack = stack.map(compile)
+
+  // run in stack
+  function next (err) {
+    if (err) return error(err)
+    var fn = stack.shift()
+    while (fn && fn.length !== 2) fn = stack.shift()
+    if (!fn) return done.call(context, null, args)
+    fn.call(context, args, next)
+  }
+
+  // error handling
+  function error (err) {
+    var fn = stack.shift()
+    while (fn && fn.length !== 3) fn = stack.shift()
+    if (fn) return fn.call(context, err, args, next)
+    else return done.call(context, err)
+  }
+
+  // kick us off
+  next()
+}
+
+},{"./compile":2}],5:[function(require,module,exports){
+/**
+ * Module dependencies
+ */
+
+var isArray = Array.isArray
+
+/**
+ * Export `type`
+ */
+
+module.exports = type
+
+/**
+ * Get the type
+ *
+ * @param {Mixed} v
+ * @return {String}
+ */
+
+function type(v) {
+  return isArray(v)
+    ? 'array'
+    : v && v.vo
+    ? 'vo'
+    : v && v.catch
+    ? 'catch'
+    : typeof v
+}
+
+},{}],6:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = setTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    clearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        setTimeout(drainQueue, 0);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],7:[function(require,module,exports){
 (function (process){
 /**
  * Module dependencies
@@ -111,8 +596,8 @@ function clean (stack) {
   })
   .clean(stack)
   .split('\n')
-  .filter(line => line)
-  .map(line => '    \u25B8 ' + line)
+  .filter(function (line) { return line })
+  .map(function (line) { return '    \u25B8 ' + line })
   .join('\n')
 }
 
@@ -143,7 +628,7 @@ function repeat (str, n) {
 }
 
 }).call(this,require('_process'))
-},{"_process":8,"stack-utils":2}],2:[function(require,module,exports){
+},{"_process":6,"stack-utils":8}],8:[function(require,module,exports){
 (function (process){
 module.exports = StackUtils;
 
@@ -431,492 +916,7 @@ Object.keys(StackUtils.prototype).forEach(function (key) {
 });
 
 }).call(this,require('_process'))
-},{"_process":8}],3:[function(require,module,exports){
-'use strict'
-
-/**
- * Module Dependencies
- */
-
-var Pipeline = require('./lib/pipeline')
-var Stack = require('./lib/stack')
-var sliced = require('sliced')
-var isArray = Array.isArray
-var noop = function () {}
-var keys = Object.keys
-
-/**
- * Module Exports
- */
-
-module.exports = Vo
-
-/**
- * Initialize a `Vo` instance
- *
- * @param {Array|Object|Function, ...}
- * @return {Function}
- */
-
-function Vo() {
-  var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
-
-  // run vo
-  return run(function (context, args, done) {
-    Pipeline(pipeline, context, args, function(err, args) {
-      if (err) return done.call(context, err)
-      return done.apply(context, [null].concat(args))
-    })
-  })
-}
-
-/**
- * Pipeline the functions
- *
- * @param {Mixed}
- * @return {Function}
- */
-
-Vo.stack = function stack () {
-  var stack = isArray(this) ? sliced(this) : sliced(arguments)
-
-  // run the stack
-  return run(function (context, args, done) {
-    Stack(stack, context, args, function(err, v) {
-      if (err) return done(err)
-      return done.apply(this, [null].concat(v))
-    })
-  })
-}
-
-/**
- * Simple wrapper that will allow us
- * to switch between fixed arguments
- * and transform pipelines
- *
- * @param {Function} fn
- * @return {Function}
- */
-
-function run (fn) {
-  function vo () {
-    var args = sliced(arguments)
-    var last = args[args.length - 1]
-    var context = this
-
-    if (typeof last === 'function') {
-      var done = args.pop()
-      fn(context, args, done)
-    } else {
-      // return a promise
-      return new Promise(function (success, failure) {
-        fn(context, args, function(err, ret) {
-          if (arguments.length > 2) ret = sliced(arguments, 1)
-          return err ? failure(err) : success(ret)
-        })
-      })
-    }
-  }
-
-  // with "vo instanceof Vo"
-  vo.vo = true
-
-  return vo
-}
-
-/**
- * Catch errors
- *
- * @param {Function} fn
- * @return {Function}
- */
-
-Vo.catch = function (fn) {
-  // simple wrapper to avoid attaching to the passed-in function
-  function catcher () { return fn }
-  catcher.catch = true
-  return catcher
-}
-
-},{"./lib/pipeline":5,"./lib/stack":6,"sliced":10}],4:[function(require,module,exports){
-/**
- * Module Dependencies
- */
-
-var compact = require('lodash.compact')
-var error = require('err-candy')
-var wrapped = require('wrapped')
-var type = require('./type')
-var keys = Object.keys
-
-/**
- * Export `compile`
- */
-
-module.exports = compile
-
-/**
- * Compile
- */
-
-function compile (mixed) {
-  switch (type(mixed)) {
-    case 'function': return Func(mixed)
-    case 'object': return object(mixed)
-    case 'catch': return Catcher(mixed)
-    case 'array': return array(mixed)
-    case 'vo': return Vo(mixed)
-    default: return identity
-  }
-}
-
-/**
- * Wrap functions
- *
- * @param {Function} fn
- * @return {Function}
- */
-
-function Func (fn) {
-  return function func (args, done) {
-    wrapped(fn).apply(this, args.concat(next))
-
-    function next(err) {
-      if (err) return done(error(err))
-      return done.apply(null, arguments)
-    }
-  }
-}
-
-/**
- * Wrap Objects
- *
- * @param {Object|Array} iterable
- * @return {Function}
- */
-
-function object (o) {
-  // compile the object
-  o = keys(o).reduce(function (o, k) {
-    o[k] = compile(o[k])
-    return o
-  }, o)
-
-  return function obj (args, done) {
-    var pending = keys(o).length
-    var context = this
-    var errors = []
-    var out = {}
-
-    keys(o).map(function(k, i) {
-      o[k].call(context, args, function(err, args) {
-        if (err) {
-          errors[i] = err
-          out[k] = err
-        } else {
-          out[k] = args
-        }
-
-        if (!--pending) {
-          errors = compact(errors)
-          return errors.length
-            ? done(error(errors), out)
-            : done(null, out)
-        }
-      })
-    })
-  }
-}
-
-/**
- * Wrap Arrays
- */
-
-function array (a) {
-  a = a.map(compile)
-
-  return function arr (args, done) {
-    var pending = a.length
-    var context = this
-    var errors = []
-    var out = []
-
-    // run in parallel
-    a.map(function (fn, i) {
-      fn.call(context, args, function(err, args) {
-        if (err) {
-          errors[i] = err
-          out[i] = err
-        } else {
-          out[i] = args
-        }
-
-        if (!--pending) {
-          errors = compact(errors)
-          return errors.length
-            ? done(error(errors), out)
-            : done(null, out)
-        }
-      })
-    })
-  }
-}
-
-/**
- * Wrap vo
- *
- * @param {Vo} vo
- * @return {Function}
- */
-
-function Vo (v) {
-  return function vo (args, done) {
-    return v.apply(this, args.concat(function(err, v) {
-      if (err) return done(error(err))
-      return done.apply(null, arguments)
-    }))
-  }
-}
-
-/**
- * Catcher
- *
- * @param {Function} fn
- * @return {Function}
- */
-
-function Catcher(fn) {
-  return function catcher (err, args, done) {
-    return wrapped(fn()).apply(this, [err].concat(args).concat(done))
-  }
-}
-
-/**
- * Identity
- *
- * @param {Array} args
- * @param {Function} done
- */
-
-function identity (args, done) {
-  return done(null, args)
-}
-
-},{"./type":7,"err-candy":1,"lodash.compact":9,"wrapped":11}],5:[function(require,module,exports){
-/**
- * Module Dependencies
- */
-
-var compile = require('./compile')
-var sliced = require('sliced')
-
-/**
- * Export `Pipeline`
- */
-
-module.exports = Pipeline
-
-/**
- * Initialize `Pipeline`
- *
- * @param {Array} series array of functions
- * @param {Array} args
- * @param {Function} done
- */
-
-function Pipeline (pipeline, context, args, done) {
-  pipeline = pipeline.map(compile)
-
-  // run in series
-  function next (err) {
-    if (err) return error(err, sliced(arguments, 1))
-    var fn = pipeline.shift()
-    while (fn && fn.length !== 2) fn = pipeline.shift()
-    if (!fn) return done.call(context, null, sliced(arguments, 1))
-    fn.call(context, sliced(arguments, 1), next)
-  }
-
-  // error handling
-  function error (err, args) {
-    var fn = pipeline.shift()
-    while (fn && fn.length !== 3) fn = pipeline.shift()
-    if (fn) return fn.call(context, err, args, next)
-    else return done.call(context, err)
-  }
-
-  // kick us off
-  next.apply(null, [null].concat(args))
-}
-
-},{"./compile":4,"sliced":10}],6:[function(require,module,exports){
-/**
- * Module Dependencies
- */
-
-var compile = require('./compile')
-
-/**
- * Export `Stack`
- */
-
-module.exports = Stack
-
-/**
- * Initialize `Stack`
- *
- * @param {Array} series array of functions
- * @param {Array} args
- * @param {Function} done
- */
-
-function Stack (stack, context, args, done) {
-  stack = stack.map(compile)
-
-  // run in stack
-  function next (err) {
-    if (err) return error(err)
-    var fn = stack.shift()
-    while (fn && fn.length !== 2) fn = stack.shift()
-    if (!fn) return done.call(context, null, args)
-    fn.call(context, args, next)
-  }
-
-  // error handling
-  function error (err) {
-    var fn = stack.shift()
-    while (fn && fn.length !== 3) fn = stack.shift()
-    if (fn) return fn.call(context, err, args, next)
-    else return done.call(context, err)
-  }
-
-  // kick us off
-  next()
-}
-
-},{"./compile":4}],7:[function(require,module,exports){
-/**
- * Module dependencies
- */
-
-var isArray = Array.isArray
-
-/**
- * Export `type`
- */
-
-module.exports = type
-
-/**
- * Get the type
- *
- * @param {Mixed} v
- * @return {String}
- */
-
-function type(v) {
-  return isArray(v)
-    ? 'array'
-    : v && v.vo
-    ? 'vo'
-    : v && v.catch
-    ? 'catch'
-    : typeof v
-}
-
-},{}],8:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = setTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    clearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],9:[function(require,module,exports){
+},{"_process":6}],9:[function(require,module,exports){
 /**
  * lodash 3.0.0 (Custom Build) <https://lodash.com/>
  * Build: `lodash modern modularize exports="npm" -o ./`
@@ -1770,4 +1770,4 @@ function wrappy (fn, cb) {
   }
 }
 
-},{}]},{},[3]);
+},{}]},{},[1]);
