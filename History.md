@@ -1,4 +1,9 @@
 
+3.0.0 / 2016-02-20
+==================
+
+  * revert vo() to be a pipeline flow. use vo.stack() to be for middleware-style flows
+
 2.0.0 / 2016-02-13
 ==================
 
