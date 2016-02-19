@@ -19,7 +19,7 @@ describe('vo.catch(fn)', function() {
       }
 
       function b (err, a, b, fn) {
-        assert.equal(err.message, 'oh noes!')
+        includes(err.message, 'oh noes!')
         assert.equal(a, 'a')
         assert.equal(b, 'b')
         fn(null, 'c')
@@ -31,7 +31,7 @@ describe('vo.catch(fn)', function() {
         return 'd'
       }
 
-      return vo(a, vo.catch(b), c)('a', 'b')
+      return vo.stack(a, vo.catch(b), c)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
@@ -45,7 +45,7 @@ describe('vo.catch(fn)', function() {
       }
 
       function b (err, a, b, fn) {
-        assert.equal(err.message, 'oh noes!')
+        includes(err.message, 'oh noes!')
         assert.equal(a, 'a')
         assert.equal(b, 'b')
         fn(null, 'c')
@@ -63,12 +63,12 @@ describe('vo.catch(fn)', function() {
       }
 
       function e (err, a, b) {
-        assert.equal(err.message, 'blowin up')
+        includes(err.message, 'blowin up')
         assert.equal(a, 'a')
         assert.equal(b, 'b')
       }
 
-      return vo(a, vo.catch(b), c, d, vo.catch(e))('a', 'b')
+      return vo.stack(a, vo.catch(b), c, d, vo.catch(e))('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
@@ -92,7 +92,7 @@ describe('vo.catch(fn)', function() {
         return 'c'
       }
 
-      return vo(a, vo.catch(b), c)('a', 'b')
+      return vo.stack(a, vo.catch(b), c)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
@@ -111,13 +111,13 @@ describe('vo.catch(fn)', function() {
       }
 
       function c (err, a, b) {
-        assert.equal(err.message, 'oh noes!!')
+        includes(err.message, 'oh noes!!')
         assert.equal(a, 'a')
         assert.equal(b, 'b')
         return 'd'
       }
 
-      return vo([a, b], vo.catch(c))('a', 'b')
+      return vo.stack([a, b], vo.catch(c))('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
@@ -133,7 +133,7 @@ describe('vo.catch(fn)', function() {
       }
 
       function b (err, fn) {
-        assert.equal(err.message, 'oh noes!')
+        includes(err.message, 'oh noes!')
         fn(null, 'c')
       }
 
@@ -142,10 +142,88 @@ describe('vo.catch(fn)', function() {
         return 'd'
       }
 
-      return vo.pipeline(a, vo.catch(b), c)('a', 'b')
+      return vo(a, vo.catch(b), c)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, 'd')
         })
     })
   })
+
+  it('should support catching multiple errors happening in parallel in arrays', function() {
+    function a (a, b) {
+      assert.equal(a, 'a')
+      assert.equal(b, 'b')
+      throw new Error('a had a boo boo')
+    }
+
+    function b (a, b, fn) {
+      assert.equal(a, 'a')
+      assert.equal(b, 'b')
+      fn(null, 'b')
+    }
+
+    function c (a, b) {
+      assert.equal(a, 'a')
+      assert.equal(b, 'b')
+      throw new Error('c had a boo boo')
+    }
+
+    function d (err, arr, fn) {
+      includes(err.message, 'a had a boo boo')
+      includes(err.message, 'c had a boo boo')
+      includes(arr[0].message, 'a had a boo boo')
+      assert.equal(arr[1], 'b')
+      includes(arr[2].message, 'c had a boo boo')
+      fn(null, 'd')
+    }
+
+    return vo([a, b, c], vo.catch(d))('a', 'b')
+      .then(function (v) {
+        assert.deepEqual(v, 'd')
+      })
+  })
+
+  it('should support catching multiple errors happening in parallel with objects', function() {
+    function a (a, b) {
+      assert.equal(a, 'a')
+      assert.equal(b, 'b')
+      throw new Error('a had a boo boo')
+    }
+
+    function b (a, b, fn) {
+      assert.equal(a, 'a')
+      assert.equal(b, 'b')
+      fn(null, 'b')
+    }
+
+    function c (a, b) {
+      assert.equal(a, 'a')
+      assert.equal(b, 'b')
+      throw new Error('c had a boo boo')
+    }
+
+    function d (err, arr, fn) {
+      includes(err.message, 'a had a boo boo')
+      includes(err.message, 'c had a boo boo')
+      includes(arr.a.message, 'a had a boo boo')
+      assert.equal(arr.b, 'b')
+      includes(arr.c.message, 'c had a boo boo')
+      fn(null, 'd')
+    }
+
+    return vo({ a: a, b: b, c: c }, vo.catch(d))('a', 'b')
+      .then(function (v) {
+        assert.deepEqual(v, 'd')
+      })
+  })
 })
+
+/**
+ * Includes error
+ */
+
+function includes (actual, expected) {
+  if (!~actual.indexOf(expected)) {
+    throw new Error(`"${actual}" does not contain "${expected}"`)
+  }
+}

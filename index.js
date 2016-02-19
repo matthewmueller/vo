@@ -5,7 +5,7 @@
  */
 
 var Pipeline = require('./lib/pipeline')
-var Series = require('./lib/series')
+var Stack = require('./lib/stack')
 var sliced = require('sliced')
 var isArray = Array.isArray
 var noop = function () {}
@@ -25,11 +25,11 @@ module.exports = Vo
  */
 
 function Vo() {
-  var series = isArray(this) ? sliced(this) : sliced(arguments)
+  var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
 
   // run vo
   return run(function (context, args, done) {
-    Series(series, context, args, function(err) {
+    Pipeline(pipeline, context, args, function(err, args) {
       if (err) return done.call(context, err)
       return done.apply(context, [null].concat(args))
     })
@@ -43,12 +43,12 @@ function Vo() {
  * @return {Function}
  */
 
-Vo.pipeline = function pipeline () {
-  var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
+Vo.stack = function stack () {
+  var stack = isArray(this) ? sliced(this) : sliced(arguments)
 
-  // run the pipeline
+  // run the stack
   return run(function (context, args, done) {
-    Pipeline(pipeline, context, args, function(err, v) {
+    Stack(stack, context, args, function(err, v) {
       if (err) return done(err)
       return done.apply(this, [null].concat(v))
     })

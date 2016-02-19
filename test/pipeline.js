@@ -18,7 +18,7 @@ describe('pipeline', function() {
         return a + b;
       }
 
-      Vo.pipeline(sync)('a', 'b', function(err, v) {
+      Vo(sync)('a', 'b', function(err, v) {
         if (err) return done(err);
         assert.equal(v, 'ab');
         done();
@@ -33,8 +33,8 @@ describe('pipeline', function() {
         return a + b;
       }
 
-      Vo.pipeline(sync)('a', 'b', function(err, v) {
-        assert.equal('some error', err.message);
+      Vo(sync)('a', 'b', function(err, v) {
+        includes(err.message, 'some error');
         assert.equal(v, undefined);
         done();
       })
@@ -48,7 +48,7 @@ describe('pipeline', function() {
           fn(null, a + b);
         }
 
-        Vo.pipeline(async)('a', 'b', function(err, v) {
+        Vo(async)('a', 'b', function(err, v) {
           if (err) return done(err);
           assert.equal(v, 'ab');
           done();
@@ -62,8 +62,8 @@ describe('pipeline', function() {
           return fn(new Error('some error'));
         }
 
-        Vo.pipeline(async)('a', 'b', function(err, v) {
-          assert.equal('some error', err.message);
+        Vo(async)('a', 'b', function(err, v) {
+          includes(err.message, 'some error');
           assert.equal(undefined, v);
           done();
         })
@@ -78,7 +78,7 @@ describe('pipeline', function() {
           return yield timeout(50);
         }
 
-        Vo.pipeline(gen)('a', 'b', function(err, v) {
+        Vo(gen)('a', 'b', function(err, v) {
           if (err) return done(err);
           assert.equal(v, 50);
           done();
@@ -93,8 +93,8 @@ describe('pipeline', function() {
           return a + b;
         }
 
-        Vo.pipeline(gen)('a', 'b', function(err, v) {
-          assert.equal('some error', err.message);
+        Vo(gen)('a', 'b', function(err, v) {
+          includes(err.message, 'some error');
           assert.equal(undefined, v);
           done();
         });
@@ -109,7 +109,7 @@ describe('pipeline', function() {
           return promise_timeout(50);
         }
 
-        Vo.pipeline(promise)('a', 'b', function(err, v) {
+        Vo(promise)('a', 'b', function(err, v) {
           if (err) return done(err);
           assert.equal(v, 50);
           done();
@@ -123,8 +123,8 @@ describe('pipeline', function() {
           return promise_timeout(0);
         }
 
-        Vo.pipeline(promise)('a', 'b', function(err, v) {
-          assert.equal('no ms present', err.message);
+        Vo(promise)('a', 'b', function(err, v) {
+          includes(err.message, 'no ms present');
           assert.equal(undefined, v);
           done();
         })
@@ -140,7 +140,7 @@ describe('pipeline', function() {
         return fn(null, a + b);
       }
 
-      return Vo.pipeline(async)('a', 'b')
+      return Vo(async)('a', 'b')
         .then(function (v) {
           assert.equal(v, 'ab')
         })
@@ -178,7 +178,7 @@ describe('pipeline', function() {
       }
 
 
-      Vo.pipeline(a, b, c, d)('a', 'b', function(err, v) {
+      Vo(a, b, c, d)('a', 'b', function(err, v) {
         if (err) return done(err);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
         assert.deepEqual('d', v);
@@ -216,7 +216,7 @@ describe('pipeline', function() {
       }
 
 
-      Vo.pipeline.apply([a, b, c, d])('a', 'b', function(err, v) {
+      Vo.apply([a, b, c, d])('a', 'b', function(err, v) {
         if (err) return done(err);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
         assert.deepEqual('d', v);
@@ -255,8 +255,8 @@ describe('pipeline', function() {
       }
 
 
-      Vo.pipeline(a, b, c, d)('a', 'b', function(err, v) {
-        assert.equal('no ms present', err.message);
+      Vo(a, b, c, d)('a', 'b', function(err, v) {
+        includes(err.message, 'no ms present')
         assert.equal(undefined, v);
         assert.deepEqual(['a', 'b', 'c'], o);
         done();
@@ -294,8 +294,8 @@ describe('pipeline', function() {
       }
 
 
-      Vo.pipeline.call([a, b, c, d])('a', 'b', function(err, v) {
-        assert.equal('no ms present', err.message);
+      Vo.call([a, b, c, d])('a', 'b', function(err, v) {
+        includes(err.message, 'no ms present');
         assert.equal(undefined, v);
         assert.deepEqual(['a', 'b', 'c'], o);
         done();
@@ -317,7 +317,7 @@ describe('pipeline', function() {
     it('should run an array of functions in parallel', function(done) {
       var o = [];
 
-      Vo.pipeline([to(50, o), to(150, o), to(100, o)])(function(err, v) {
+      Vo([to(50, o), to(150, o), to(100, o)])(function(err, v) {
         if (err) return done(err);
         assert.deepEqual([50, 150, 100], v);
         assert.deepEqual([50, 100, 150], o);
@@ -329,15 +329,15 @@ describe('pipeline', function() {
     it('should handle errors', function(done) {
       var o = [];
 
-      Vo.pipeline([to(50, o), to(0, o), to(100, o)])(function(err, v) {
-        assert.equal('ms must be specified', err.message);
+      Vo([to(50, o), to(0, o), to(100, o)])(function(err, v) {
+        includes(err.message, 'ms must be specified');
         assert.equal(undefined, v);
         done();
       });
     });
 
     it('should handle a single array', function(done) {
-      var vo = Vo.pipeline(function(a) {
+      var vo = Vo(function(a) {
         assert.deepEqual(a, [1, 2, 3])
         return a;
       })
@@ -364,7 +364,7 @@ describe('pipeline', function() {
     it('should run an object of functions in parallel', function(done) {
       var o = [];
 
-      Vo.pipeline({ a: to(50, o), b: to(150, o), c: to(100, o) })(function(err, v) {
+      Vo({ a: to(50, o), b: to(150, o), c: to(100, o) })(function(err, v) {
         if (err) return done(err);
         assert.deepEqual(v, {
           a: 50,
@@ -380,8 +380,8 @@ describe('pipeline', function() {
     it('should catch any errors', function(done) {
       var o = [];
 
-      Vo.pipeline({ a: to(50, o), b: to(150, o), c: to(0, o) })(function(err, v) {
-        assert.equal('ms must be specified', err.message);
+      Vo({ a: to(50, o), b: to(150, o), c: to(0, o) })(function(err, v) {
+        includes(err.message, 'ms must be specified');
         assert.equal(undefined, v);
         done();
       })
@@ -419,7 +419,7 @@ describe('pipeline', function() {
         return yield timeout(50, 'd');
       }
 
-      Vo.pipeline(Vo.pipeline(a, b), c, d)('a', 'b', function(err, v) {
+      Vo(Vo(a, b), c, d)('a', 'b', function(err, v) {
         if (err) return done(err);
         assert.equal('d', v);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
@@ -439,10 +439,10 @@ describe('pipeline', function() {
       }
 
       var o = [];
-      var a = Vo.pipeline([to(50, o), to(150, o)]);
-      var b = Vo.pipeline([to(100, o), to(200, o)]);
+      var a = Vo([to(50, o), to(150, o)]);
+      var b = Vo([to(100, o), to(200, o)]);
 
-      Vo.pipeline([a, b])(function(err, v) {
+      Vo([a, b])(function(err, v) {
         if (err) return done(err);
         assert.deepEqual([[50, 150], [100, 200]], v);
         assert.deepEqual([50, 100, 150, 200], o);
@@ -462,10 +462,10 @@ describe('pipeline', function() {
       }
 
       var o = [];
-      var a = Vo.pipeline({ a1: to(50, o), a2: to(150, o) });
-      var b = Vo.pipeline({ b1: to(100, o), b2: to(200, o) });
+      var a = Vo({ a1: to(50, o), a2: to(150, o) });
+      var b = Vo({ b1: to(100, o), b2: to(200, o) });
 
-      Vo.pipeline({ c1: a, c2: b })(function(err, v) {
+      Vo({ c1: a, c2: b })(function(err, v) {
         if (err) return done(err);
 
         assert.deepEqual(v, {
@@ -496,11 +496,11 @@ describe('pipeline', function() {
       }
 
       var o = [];
-      var a = Vo.pipeline({ a1: to(50, o), a2: to(0, o) });
-      var b = Vo.pipeline({ b1: to(100, o), b2: to(200, o) });
+      var a = Vo({ a1: to(50, o), a2: to(0, o) });
+      var b = Vo({ b1: to(100, o), b2: to(200, o) });
 
-      Vo.pipeline({ c1: a, c2: b })(function(err, v) {
-        assert.equal('ms must be specified', err.message);
+      Vo({ c1: a, c2: b })(function(err, v) {
+        includes(err.message, 'ms must be specified');
         assert.equal(undefined, v);
         done();
       });
@@ -520,14 +520,14 @@ describe('pipeline', function() {
         return 'b'
       }
 
-      function c (d) {
-        assert.equal(d, 'd')
+      function c (b) {
+        assert.equal(b, 'b')
         return 'c'
       }
 
-      return Vo.pipeline(a, Vo(b, c))('a', 'b')
+      return Vo(a, Vo(b, c))('a', 'b')
         .then(function (v) {
-          assert.deepEqual(v, 'd')
+          assert.deepEqual(v, 'c')
         })
     })
 
@@ -538,19 +538,17 @@ describe('pipeline', function() {
         return 'd'
       }
 
-      function b (a, b) {
-        assert.equal(a, 'a')
-        assert.equal(b, 'b')
+      function b (d) {
+        assert.equal(d, 'd')
         return 'b'
       }
 
-      function c (a, b) {
-        assert.equal(a, 'a')
+      function c (b) {
         assert.equal(b, 'b')
         return 'c'
       }
 
-      return Vo.pipeline(Vo(a, b), c)('a', 'b')
+      return Vo(Vo(a, b), c)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, 'c')
         })
@@ -594,4 +592,14 @@ function promise_timeout(ms, arg) {
       resolve(arg || ms);
     }, ms);
   });
+}
+
+/**
+ * Includes error
+ */
+
+function includes (actual, expected) {
+  if (!~actual.indexOf(expected)) {
+    throw new Error(`"${actual}" does not contain "${expected}"`)
+  }
 }

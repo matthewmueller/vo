@@ -9,11 +9,11 @@ var Vo = require('..');
  * Tests
  */
 
-describe('series', function() {
+describe('stack', function() {
 
   describe('vo()', function() {
     it('should work with no function', function(done) {
-      Vo()('a', function(err, a) {
+      Vo.stack()('a', function(err, a) {
         assert.ok(!err);
         assert.deepEqual(a, 'a');
         done();
@@ -21,7 +21,7 @@ describe('series', function() {
     })
 
     it('should work with no function and passing in multiple values', function(done) {
-      Vo()('a', 'b', function(err, a, b) {
+      Vo.stack()('a', 'b', function(err, a, b) {
         assert.ok(!err);
         assert.deepEqual(a, 'a')
         assert.deepEqual(b, 'b')
@@ -30,7 +30,7 @@ describe('series', function() {
     })
 
     it('should return an array if were using promises', function(done) {
-      Vo()('a', 'b')
+      Vo.stack()('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
           done()
@@ -39,7 +39,7 @@ describe('series', function() {
     })
 
     it('should return an array if were using generators', function *() {
-      var v = yield Vo()('a', 'b')
+      var v = yield Vo.stack()('a', 'b')
       assert.deepEqual(v, ['a', 'b'])
     })
   })
@@ -52,7 +52,7 @@ describe('series', function() {
     }
 
     it('should work with sync functions', function (done) {
-      Vo(sync)('a', 'b', function (err, a, b) {
+      Vo.stack(sync)('a', 'b', function (err, a, b) {
         if (err) return done(err);
         assert.deepEqual(a, 'a');
         assert.deepEqual(b, 'b');
@@ -61,7 +61,7 @@ describe('series', function() {
     })
 
     it('should return an array if were using promises', function() {
-      return Vo(sync)('a', 'b')
+      return Vo.stack(sync)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
@@ -72,14 +72,14 @@ describe('series', function() {
         assert.deepEqual(ab, ['a', 'b'])
       }
 
-      return Vo(sync)(['a', 'b'])
+      return Vo.stack(sync)(['a', 'b'])
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
     })
 
     it('should return an array if were using generators and have multiple args', function *() {
-      var v = yield Vo(sync)('a', 'b')
+      var v = yield Vo.stack(sync)('a', 'b')
       assert.deepEqual(v, ['a', 'b'])
     })
 
@@ -88,7 +88,7 @@ describe('series', function() {
         assert.deepEqual(ab, ['a', 'b'])
       }
 
-      var v = yield Vo(sync)(['a', 'b'])
+      var v = yield Vo.stack(sync)(['a', 'b'])
       assert.deepEqual(v, ['a', 'b'])
     })
   })
@@ -101,7 +101,7 @@ describe('series', function() {
         return fn(null, a + b);
       }
 
-      Vo(async)('a', 'b')
+      Vo.stack(async)('a', 'b')
         .then(function (v) {
           done()
         })
@@ -111,8 +111,8 @@ describe('series', function() {
     })
   })
 
-  describe('series: vo(fn, ...)', function() {
-    it('should run in series', function(done) {
+  describe('stack: vo(fn, ...)', function() {
+    it('should run in stack', function(done) {
       var o = [];
 
       function a(a, b) {
@@ -144,7 +144,7 @@ describe('series', function() {
       }
 
 
-      Vo(a, b, c, d)('a', 'b', function(err, a, b) {
+      Vo.stack(a, b, c, d)('a', 'b', function(err, a, b) {
         if (err) return done(err);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
         assert.equal('a', a);
@@ -153,7 +153,7 @@ describe('series', function() {
       })
     })
 
-    it('should run in series (using the context)', function(done) {
+    it('should run in stack (using the context)', function(done) {
       var o = [];
 
       function a(a, b) {
@@ -185,7 +185,7 @@ describe('series', function() {
       }
 
 
-      Vo.apply([a, b, c, d])('a', 'b', function(err, a, b) {
+      Vo.stack.apply([a, b, c, d])('a', 'b', function(err, a, b) {
         if (err) return done(err);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
         assert.equal('a', a);
@@ -226,8 +226,8 @@ describe('series', function() {
       }
 
 
-      Vo(a, b, c, d)('a', 'b', function(err, v) {
-        assert.equal('no ms present', err.message);
+      Vo.stack(a, b, c, d)('a', 'b', function(err, v) {
+        includes(err.message, 'no ms present')
         assert.equal(undefined, v);
         assert.deepEqual(['a', 'b', 'c'], o);
         done();
@@ -265,8 +265,8 @@ describe('series', function() {
         return yield timeout(50, 'd');
       }
 
-      Vo.call([a, b, c, d])('a', 'b', function(err, v) {
-        assert.equal('no ms present', err.message);
+      Vo.stack.call([a, b, c, d])('a', 'b', function(err, v) {
+        includes(err.message, 'no ms present')
         assert.equal(undefined, v);
         assert.deepEqual(['a', 'b', 'c'], o);
         done();
@@ -288,7 +288,7 @@ describe('series', function() {
     it('should run an array of functions in parallel', function(done) {
       var o = [];
 
-      Vo([to(50, o), to(150, o), to(100, o)])(function(err) {
+      Vo.stack([to(50, o), to(150, o), to(100, o)])(function(err) {
         if (err) return done(err);
         assert.deepEqual([50, 100, 150], o);
         done();
@@ -298,15 +298,15 @@ describe('series', function() {
     it('should handle errors', function(done) {
       var o = [];
 
-      Vo([to(50, o), to(0, o), to(100, o)])(function(err, v) {
-        assert.equal('ms must be specified', err.message);
+      Vo.stack([to(50, o), to(0, o), to(100, o)])(function(err, v) {
+        includes(err.message, 'ms must be specified')
         assert.equal(undefined, v);
         done();
       });
     });
 
     it('should handle a single array', function(done) {
-      var vo = Vo(function(a) {
+      var vo = Vo.stack(function(a) {
         assert.deepEqual(a, [1, 2, 3])
         return a;
       })
@@ -333,7 +333,7 @@ describe('series', function() {
     it('should run an object of functions in parallel', function(done) {
       var o = [];
 
-      Vo({ a: to(50, o), b: to(150, o), c: to(100, o) })(function(err, v) {
+      Vo.stack({ a: to(50, o), b: to(150, o), c: to(100, o) })(function(err, v) {
         if (err) return done(err);
         assert.deepEqual(v, undefined);
         assert.deepEqual([50, 100, 150], o);
@@ -344,8 +344,8 @@ describe('series', function() {
     it('should catch any errors', function(done) {
       var o = [];
 
-      Vo({ a: to(50, o), b: to(150, o), c: to(0, o) })(function(err, v) {
-        assert.equal('ms must be specified', err.message);
+      Vo.stack({ a: to(50, o), b: to(150, o), c: to(0, o) })(function(err, v) {
+        includes(err.message, 'ms must be specified')
         assert.equal(undefined, v);
         done();
       })
@@ -354,11 +354,12 @@ describe('series', function() {
 
   describe('composition: vo(vo(...), [vo(...), vo(...)])', function() {
 
-    it('should support series composition', function(done) {
+    it('should support stack composition', function(done) {
       var o = [];
 
       function a(a, b) {
         o.push('a');
+        assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
         return 'a';
@@ -366,6 +367,7 @@ describe('series', function() {
 
       function b(a, b, fn) {
         o.push('b');
+        assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
         fn(null, 'b1', 'b2');
@@ -373,6 +375,7 @@ describe('series', function() {
 
       function c(a, b) {
         o.push('c');
+        assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
         return promise_timeout(50, 'c');
@@ -380,13 +383,15 @@ describe('series', function() {
 
       function *d(a, b) {
         o.push('d');
+        assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
         return yield timeout(50, 'd');
       }
 
-      Vo(Vo(a, b), c, d)('a', 'b', function(err, a, b) {
+      Vo.stack(Vo.stack(a, b), c, d).call({ ctx: 'ctx' }, 'a', 'b', function(err, a, b) {
         if (err) return done(err);
+        assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
@@ -394,7 +399,7 @@ describe('series', function() {
       })
     });
 
-    it('should support series composition, returning an array if it\'s a promise', function() {
+    it('should support stack composition, returning an array if it\'s a promise', function() {
       var o = [];
 
       function a(a, b) {
@@ -425,7 +430,7 @@ describe('series', function() {
         return yield timeout(50, 'd');
       }
 
-      return Vo(Vo(a, b), c, d)('a', 'b')
+      return Vo.stack(Vo.stack(a, b), c, d)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, ['a', 'b'])
         })
@@ -434,6 +439,7 @@ describe('series', function() {
     it('should support async composition', function(done) {
       function to(ms, arr) {
         return function(fn) {
+          assert.equal(this.ctx, 'ctx')
           timeout(ms)(function(err, v) {
             if (!ms) return fn(new Error('ms must be specified'));
             arr.push(v);
@@ -443,10 +449,10 @@ describe('series', function() {
       }
 
       var o = [];
-      var a = Vo([to(50, o), to(150, o)]);
-      var b = Vo([to(100, o), to(200, o)]);
+      var a = Vo.stack([to(50, o), to(150, o)]);
+      var b = Vo.stack([to(100, o), to(200, o)]);
 
-      Vo([a, b])(function(err, v) {
+      Vo.stack([a, b]).call({ ctx: 'ctx' }, function(err, v) {
         if (err) return done(err);
         assert.deepEqual(v, undefined);
         assert.deepEqual([50, 100, 150, 200], o);
@@ -457,6 +463,7 @@ describe('series', function() {
     it('should support async composition with objects', function(done) {
       function to(ms, arr) {
         return function(fn) {
+          assert.equal(this.ctx, 'ctx')
           timeout(ms)(function(err, v) {
             if (!ms) return fn(new Error('ms must be specified'));
             arr.push(v);
@@ -466,10 +473,10 @@ describe('series', function() {
       }
 
       var o = [];
-      var a = Vo({ a1: to(50, o), a2: to(150, o) });
-      var b = Vo({ b1: to(100, o), b2: to(200, o) });
+      var a = Vo.stack({ a1: to(50, o), a2: to(150, o) });
+      var b = Vo.stack({ b1: to(100, o), b2: to(200, o) });
 
-      Vo({ c1: a, c2: b })(function(err, v) {
+      Vo.stack({ c1: a, c2: b }).call({ ctx: 'ctx'}, function(err, v) {
         if (err) return done(err);
 
         assert.deepEqual(v, undefined);
@@ -491,11 +498,11 @@ describe('series', function() {
       }
 
       var o = [];
-      var a = Vo({ a1: to(50, o), a2: to(0, o) });
-      var b = Vo({ b1: to(100, o), b2: to(200, o) });
+      var a = Vo.stack({ a1: to(50, o), a2: to(0, o) });
+      var b = Vo.stack({ b1: to(100, o), b2: to(200, o) });
 
-      Vo({ c1: a, c2: b })(function(err, v) {
-        assert.equal('ms must be specified', err.message);
+      Vo.stack({ c1: a, c2: b })(function(err, v) {
+        includes(err.message, 'ms must be specified')
         assert.equal(undefined, v);
         done();
       });
@@ -540,4 +547,14 @@ function promise_timeout(ms, arg) {
       resolve(arg || ms);
     }, ms);
   });
+}
+
+/**
+ * Includes error
+ */
+
+function includes (actual, expected) {
+  if (!~actual.indexOf(expected)) {
+    throw new Error(`"${actual}" does not contain "${expected}"`)
+  }
 }
