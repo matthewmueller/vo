@@ -194,6 +194,51 @@ describe('stack', function() {
       })
     })
 
+    it('should run in stack (including a context)', function(done) {
+      var o = [];
+
+      function a(a, b) {
+        o.push('a');
+        assert.equal(this.ctx, 'ctx')
+        assert.equal('a', a);
+        assert.equal('b', b);
+        return 'a';
+      }
+
+      function b(a, b, fn) {
+        o.push('b');
+        assert.equal(this.ctx, 'ctx')
+        assert.equal('a', a);
+        assert.equal('b', b);
+        fn(null, 'b1', 'b2');
+      }
+
+      function c(a, b) {
+        o.push('c');
+        assert.equal(this.ctx, 'ctx')
+        assert.equal('a', a);
+        assert.equal('b', b);
+        return promise_timeout(50, 'c');
+      }
+
+      function *d(a, b) {
+        o.push('d');
+        assert.equal(this.ctx, 'ctx')
+        assert.equal('a', a);
+        assert.equal('b', b);
+        return yield timeout(50, 'd');
+      }
+
+
+      Vo.stack.apply([a, b, c, d]).call({ ctx: 'ctx'}, 'a', 'b', function(err, a, b) {
+        if (err) return done(err);
+        assert.deepEqual(['a', 'b', 'c', 'd'], o);
+        assert.equal('a', a);
+        assert.equal('b', b);
+        done();
+      })
+    })
+
     it('should handle errors', function(done) {
       var o = [];
 
