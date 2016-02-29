@@ -4,6 +4,7 @@
  * Module Dependencies
  */
 
+var Promise = global.Promise || require('es6-promise').Promise
 var Pipeline = require('./lib/pipeline')
 var Stack = require('./lib/stack')
 var sliced = require('sliced')
