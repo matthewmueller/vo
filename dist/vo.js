@@ -133,7 +133,7 @@ function compile (mixed) {
     case 'catch': return Catcher(mixed)
     case 'array': return array(mixed)
     case 'vo': return Vo(mixed)
-    default: return identity
+    default: return Identity(mixed)
   }
 }
 
@@ -265,8 +265,10 @@ function Catcher(fn) {
  * @param {Function} done
  */
 
-function identity (args, done) {
-  return done(null, args)
+function Identity (value) {
+  return function identity (args, done) {
+    return done(null, value)
+  }
 }
 
 },{"./type":5,"err-candy":7,"lodash.compact":9,"wrapped":11}],3:[function(require,module,exports){

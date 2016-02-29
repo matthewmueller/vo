@@ -1,4 +1,9 @@
 
+3.0.1 / 2016-02-29
+==================
+
+  * support passing literals through vo(5) that just flow through (like promise.resolve(5))
+
 3.0.0 / 2016-02-20
 ==================
 
