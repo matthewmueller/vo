@@ -578,6 +578,26 @@ describe('stack', function() {
         done();
       });
     });
+
+    it('should have consistent & expected error signatures (only the error)', function() {
+      function a (a, b, fn) {
+        return fn(null, 'a', 'b', 'c')
+      }
+
+      function b (a, b, fn) {
+        throw new Error('b error')
+        fn(null, 'b')
+      }
+
+      function c (err, a, b) {
+        return 'hi'
+      }
+
+      return Vo.stack(a, b, Vo.catch(c))('a', 'b')
+        .then(function (v) {
+          console.log(v)
+        })
+    })
   })
 })
 

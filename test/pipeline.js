@@ -531,6 +531,27 @@ describe('pipeline', function() {
         done();
       });
     });
+
+    it('should have consistent & expected error signatures (only the error)', function() {
+      function a (a, b, fn) {
+        return fn(null, 'a', 'b', 'c')
+      }
+
+      function b (a, b, fn) {
+        throw new Error('b error')
+        fn(null, 'b')
+      }
+
+      function c (err, out) {
+        console.log(out)
+        return 'hi'
+      }
+
+      return Vo([a, b], Vo.catch(c))('a', 'b')
+        .then(function (v) {
+          console.log(v)
+        })
+    })
   })
 
   describe('working with vo()', function() {
@@ -577,6 +598,65 @@ describe('pipeline', function() {
       return Vo(Vo(a, b), c)('a', 'b')
         .then(function (v) {
           assert.deepEqual(v, 'c')
+        })
+    })
+  })
+
+  describe('vo(...).bind(...)', function() {
+    it('should work with bind', function() {
+      function a (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        return 'a'
+      }
+
+      function b (d, a, next) {
+        assert.equal(d, 'd')
+        assert.equal(a, 'a')
+        next(null, 'b')
+      }
+
+      function c (d, a) {
+        assert.equal(d, 'd')
+        assert.equal(a, 'a')
+        return 'c'
+      }
+
+      return Vo(a, Vo([b, c]).bind(null, 'd'))('a', 'b')
+        .then(function (v) {
+          assert.deepEqual(v, ['b', 'c'])
+        })
+    })
+
+    it('bound functions should work with catch', function() {
+      var called = 0
+
+      function a (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        throw new Error('oh noz!')
+        return 'a'
+      }
+
+      function b (d, a) {
+        called++
+        return 'b'
+      }
+
+      function c (d, a) {
+        called++
+        return 'c'
+      }
+
+      function d (err) {
+        includes(err.message, 'oh noz!')
+        return ['b', 'c']
+      }
+
+      return Vo(a, Vo([b, c]).bind(null, 'd'), Vo.catch(d))('a', 'b')
+        .then(function (v) {
+          assert.equal(called, 0)
+          assert.deepEqual(v, ['b', 'c'])
         })
     })
   })
