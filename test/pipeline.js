@@ -10,6 +10,32 @@ var Vo = require('..');
  */
 
 describe('pipeline', function() {
+  describe('literals', function() {
+    it('should strings through', function(done) {
+      Vo('hi')(function(err, v) {
+        if (err) return done(err)
+        assert.equal(v, 'hi')
+        done()
+      })
+    })
+
+    it('should booleans through', function(done) {
+      Vo(false)(function(err, v) {
+        if (err) return done(err)
+        assert.ok(v === false)
+        done()
+      })
+    })
+
+    it('should pass numbers through', function(done) {
+      Vo(3)(function(err, v) {
+        if (err) return done(err)
+        assert.equal(v, 3)
+        done()
+      })
+    })
+  })
+
   describe('sync functions: vo(fn)', function() {
     it('should work with synchronous functions', function(done) {
       function sync(a, b) {

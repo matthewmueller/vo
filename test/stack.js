@@ -44,6 +44,32 @@ describe('stack', function() {
     })
   })
 
+  describe('literals', function() {
+    it('should strings through', function(done) {
+      Vo.stack('hi')('hello', function(err, v) {
+        if (err) return done(err)
+        assert.equal(v, 'hello')
+        done()
+      })
+    })
+
+    it('should booleans through', function(done) {
+      Vo.stack(false)(true, function(err, v) {
+        if (err) return done(err)
+        assert.ok(v === true)
+        done()
+      })
+    })
+
+    it('should pass numbers through', function(done) {
+      Vo.stack(3)(6, function(err, v) {
+        if (err) return done(err)
+        assert.equal(v, 6)
+        done()
+      })
+    })
+  })
+
   describe('sync functions', function() {
     function sync(a, b) {
       assert.equal(a, 'a');
