@@ -412,6 +412,19 @@ describe('stack', function() {
       })
     })
 
+    it('should pass through any literals', function() {
+      return Vo.stack({
+        type: 'create user',
+        payload: {
+          name: 'matt',
+          age: 26,
+          favorite_numbers: [36, 88]
+        }
+      })('anything').then(function (v) {
+        assert.equal(v, 'anything')
+      })
+    })
+
     it('should catch any errors', function(done) {
       var o = [];
 
