@@ -420,7 +420,9 @@ describe('stack', function() {
           age: 26,
           favorite_numbers: [36, 88],
           superuser: undefined,
-          admin: null
+          admin: null,
+          object: {},
+          array: []
         }
       })('anything').then(function (v) {
         assert.equal(v, 'anything')
