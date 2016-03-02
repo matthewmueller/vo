@@ -1,4 +1,10 @@
 
+3.0.3 / 2016-03-02
+==================
+
+  * objects should pass through null values
+  * add tests for passing through literals
+
 3.0.2 / 2016-02-29
 ==================
 
