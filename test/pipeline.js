@@ -409,7 +409,9 @@ describe('pipeline', function() {
         payload: {
           name: 'matt',
           age: 26,
-          favorite_numbers: [36, 88]
+          favorite_numbers: [36, 88],
+          superuser: undefined,
+          admin: null
         }
       })('anything').then(function (v) {
         assert.deepEqual(v, {
@@ -417,7 +419,9 @@ describe('pipeline', function() {
           payload: {
             name: 'matt',
             age: 26,
-            favorite_numbers: [36, 88]
+            favorite_numbers: [36, 88],
+            superuser: undefined,
+            admin: null
           }
         })
       })
