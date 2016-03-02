@@ -1,4 +1,9 @@
 
+3.0.4 / 2016-03-02
+==================
+
+  * return immediately if we don't have any pending values
+
 3.0.3 / 2016-03-02
 ==================
 
