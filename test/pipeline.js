@@ -3,6 +3,7 @@
  */
 
 var assert = require('assert');
+var bind = require('co-bind');
 var Vo = require('..');
 
 /**
@@ -606,6 +607,20 @@ describe('pipeline', function() {
         .then(function (v) {
           assert.deepEqual(v, 'c')
         })
+    })
+  })
+
+  describe('.bind()', function() {
+    it('should work with bound generators', function() {
+      function * a (binding, msg) {
+        assert.equal(this.ctx, 'context')
+        assert.equal(binding, 'binding')
+        assert.equal(msg, 'hi')
+        return 'all done'
+      }
+
+      return Vo(bind(a, { ctx: 'context' }, 'binding'))('hi')
+        .then(v => assert.equal(v, 'all done'))
     })
   })
 });
