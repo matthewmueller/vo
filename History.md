@@ -1,4 +1,10 @@
 
+3.0.5 / 2016-03-11
+==================
+
+  * replace err-candy with combine-errors
+  * add bind test and update readme
+
 3.0.4 / 2016-03-02
 ==================
 
