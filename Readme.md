@@ -32,11 +32,10 @@ Now you can run generators top-level with the runtime:
 ```js
 var res = yield superagent.get('http://google.com')
 console.log(res.status) // 200
-return res.status
 ```
 
 ```bash
-vo index.js // 200
+vo index.js
 ```
 
 ## Things to keep in mind

@@ -59,11 +59,8 @@ function vo_runtime (module, file) {
   // compile with vo
   content = `global.__vo__(function * boot () {
     ${content}
-  })(function (err, value) {
+  })(function (err) {
     if (err) throw err
-    if (arguments.length >= 2) {
-      console.log(value)
-    }
   })`
 
   module._compile(content, file);
