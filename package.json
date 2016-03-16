@@ -18,6 +18,7 @@
   "dependencies": {
     "combine-errors": "1.0.1",
     "es6-promise": "^3.1.2",
+    "generatorfunction": "0.0.1",
     "lodash.compact": "^3.0.0",
     "sliced": "^1.0.1",
     "wrapped": "^1.0.0"
@@ -28,5 +29,8 @@
     "co-mocha": "^1.1.2",
     "mocha": "^2.4.5"
   },
-  "main": "index"
+  "main": "index",
+  "bin": {
+    "vo": "./bin/vo"
+  }
 }
