@@ -23,6 +23,22 @@ Vo is a control flow library for minimalists.
 
 An updated guide will be available soon. For now, take a look at the [tests](test/) for now.
 
+## Vo Runtime
+
+Now you can run generators top-level with the runtime:
+
+**index.js**
+
+```js
+var res = yield superagent.get('http://google.com')
+console.log(res.status) // 200
+return res.status
+```
+
+```bash
+vo index.js // 200
+```
+
 ## Things to keep in mind
 
 ### Binding a generator function isn't consistently implemented yet
