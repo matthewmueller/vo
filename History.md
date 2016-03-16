@@ -1,4 +1,9 @@
 
+3.0.6 / 2016-03-17
+==================
+
+  * :sparkles: added a runtime to vo to use generators top-level :sparkles:
+
 3.0.5 / 2016-03-11
 ==================
 
