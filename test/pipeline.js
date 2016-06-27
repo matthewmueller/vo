@@ -11,7 +11,7 @@ var Vo = require('..');
 
 describe('pipeline', function() {
   describe('literals', function() {
-    it('should strings through', function(done) {
+    it('should pass strings through', function(done) {
       Vo('hi')(function(err, v) {
         if (err) return done(err)
         assert.equal(v, 'hi')
@@ -19,7 +19,7 @@ describe('pipeline', function() {
       })
     })
 
-    it('should booleans through', function(done) {
+    it('should pass booleans through', function(done) {
       Vo(false)(function(err, v) {
         if (err) return done(err)
         assert.ok(v === false)
@@ -36,127 +36,127 @@ describe('pipeline', function() {
     })
   })
 
-  describe('sync functions: vo(fn)', function() {
-    it('should work with synchronous functions', function(done) {
-      function sync(a, b) {
+  // describe('sync functions: vo(fn)', function() {
+  //   it('should work with synchronous functions', function(done) {
+  //     function sync(a, b) {
+  //       assert.equal(a, 'a');
+  //       assert.equal(b, 'b');
+  //       return a + b;
+  //     }
+
+  //     Vo(sync)('a', 'b', function(err, v) {
+  //       if (err) return done(err);
+  //       assert.equal(v, 'ab');
+  //       done();
+  //     })
+  //   })
+
+  //   it('should catch thrown errors', function(done) {
+  //     function sync(a, b) {
+  //       assert.equal(a, 'a');
+  //       assert.equal(b, 'b');
+  //       throw new Error('some error');
+  //       return a + b;
+  //     }
+
+  //     Vo(sync)('a', 'b', function(err, v) {
+  //       includes(err.message, 'some error');
+  //       assert.equal(v, undefined);
+  //       done();
+  //     })
+  //   })
+
+  //   describe('async functions: vo(fn)', function() {
+  //     it('should work with asynchronous functions', function(done) {
+  //       function async(a, b, fn) {
+  //         assert.equal(a, 'a');
+  //         assert.equal(b, 'b');
+  //         fn(null, a + b);
+  //       }
+
+  //       Vo(async)('a', 'b', function(err, v) {
+  //         if (err) return done(err);
+  //         assert.equal(v, 'ab');
+  //         done();
+  //       });
+  //     });
+
+  //     it('should handle errors', function(done) {
+  //       function async(a, b, fn) {
+  //         assert.equal(a, 'a');
+  //         assert.equal(b, 'b');
+  //         return fn(new Error('some error'));
+  //       }
+
+  //       Vo(async)('a', 'b', function(err, v) {
+  //         includes(err.message, 'some error');
+  //         assert.equal(undefined, v);
+  //         done();
+  //       })
+  //     })
+  //   });
+
+  describe('generators: vo(*fn)', function() {
+    it('should work with generators', function(done) {
+      function *gen(a, b) {
         assert.equal(a, 'a');
         assert.equal(b, 'b');
-        return a + b;
+        return yield timeout(50);
       }
 
-      Vo(sync)('a', 'b', function(err, v) {
+      Vo(gen)('a', 'b', function(err, v) {
         if (err) return done(err);
-        assert.equal(v, 'ab');
+        assert.equal(v, 50);
         done();
-      })
+      });
     })
 
-    it('should catch thrown errors', function(done) {
-      function sync(a, b) {
+    it('should catch thrown errors', function() {
+      function *gen(a, b) {
         assert.equal(a, 'a');
         assert.equal(b, 'b');
         throw new Error('some error');
         return a + b;
       }
 
-      Vo(sync)('a', 'b', function(err, v) {
+      Vo(gen)('a', 'b', function(err, v) {
         includes(err.message, 'some error');
-        assert.equal(v, undefined);
+        assert.equal(undefined, v);
+        done();
+      });
+    })
+  });
+
+  describe('promises: vo(promise)', function() {
+    it('should work with promises', function(done) {
+      function promise(a, b) {
+        assert.equal(a, 'a');
+        assert.equal(b, 'b');
+        return promise_timeout(50);
+      }
+
+      Vo(promise)('a', 'b', function(err, v) {
+        if (err) return done(err);
+        assert.equal(v, 50);
         done();
       })
     })
 
-    describe('async functions: vo(fn)', function() {
-      it('should work with asynchronous functions', function(done) {
-        function async(a, b, fn) {
-          assert.equal(a, 'a');
-          assert.equal(b, 'b');
-          fn(null, a + b);
-        }
+    it('should handle errors', function(done) {
+      function promise(a, b) {
+        assert.equal(a, 'a');
+        assert.equal(b, 'b');
+        return promise_timeout(0);
+      }
 
-        Vo(async)('a', 'b', function(err, v) {
-          if (err) return done(err);
-          assert.equal(v, 'ab');
-          done();
-        });
-      });
-
-      it('should handle errors', function(done) {
-        function async(a, b, fn) {
-          assert.equal(a, 'a');
-          assert.equal(b, 'b');
-          return fn(new Error('some error'));
-        }
-
-        Vo(async)('a', 'b', function(err, v) {
-          includes(err.message, 'some error');
-          assert.equal(undefined, v);
-          done();
-        })
+      Vo(promise)('a', 'b', function(err, v) {
+        includes(err.message, 'no ms present');
+        assert.equal(undefined, v);
+        done();
       })
-    });
-
-    describe('generators: vo(*fn)', function() {
-      it('should work with generators', function(done) {
-        function *gen(a, b) {
-          assert.equal(a, 'a');
-          assert.equal(b, 'b');
-          return yield timeout(50);
-        }
-
-        Vo(gen)('a', 'b', function(err, v) {
-          if (err) return done(err);
-          assert.equal(v, 50);
-          done();
-        });
-      })
-
-      it('should catch thrown errors', function() {
-        function *gen(a, b) {
-          assert.equal(a, 'a');
-          assert.equal(b, 'b');
-          throw new Error('some error');
-          return a + b;
-        }
-
-        Vo(gen)('a', 'b', function(err, v) {
-          includes(err.message, 'some error');
-          assert.equal(undefined, v);
-          done();
-        });
-      })
-    });
-
-    describe('promises: vo(promise)', function() {
-      it('should work with promises', function(done) {
-        function promise(a, b) {
-          assert.equal(a, 'a');
-          assert.equal(b, 'b');
-          return promise_timeout(50);
-        }
-
-        Vo(promise)('a', 'b', function(err, v) {
-          if (err) return done(err);
-          assert.equal(v, 50);
-          done();
-        })
-      })
-
-      it('should handle errors', function(done) {
-        function promise(a, b) {
-          assert.equal(a, 'a');
-          assert.equal(b, 'b');
-          return promise_timeout(0);
-        }
-
-        Vo(promise)('a', 'b', function(err, v) {
-          includes(err.message, 'no ms present');
-          assert.equal(undefined, v);
-          done();
-        })
-      });
     });
   });
+  // });
 
   describe('promises: vo(fn)(args, ...).then()', function() {
     it('should support promises', function() {

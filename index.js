@@ -25,6 +25,17 @@ module.exports = Vo
  */
 
 function Vo() {
+  return Vo.pipeline.apply(this, arguments)
+}
+
+/**
+ * Pipeline the functions
+ *
+ * @param {Mixed}
+ * @return {Function}
+ */
+
+Vo.pipeline = function pipeline () {
   var pipeline = isArray(this) ? sliced(this) : sliced(arguments)
 
   // run vo
@@ -37,7 +48,7 @@ function Vo() {
 }
 
 /**
- * Pipeline the functions
+ * Stack the functions (middleware style)
  *
  * @param {Mixed}
  * @return {Function}
@@ -53,6 +64,16 @@ Vo.stack = function stack () {
       return done.apply(this, [null].concat(v))
     })
   })
+}
+
+/**
+ * Compose the functions
+ *
+ * COMING SOON
+ */
+
+Vo.compose = function compose () {
+  throw new Error('not implemented yet')
 }
 
 /**

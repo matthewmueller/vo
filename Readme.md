@@ -3,14 +3,14 @@
 
 Vo is a control flow library for minimalists.
 
-## Features
+## What you get
 
-- Seamlessly supports promises, generators, synchronous & asynchronous functions.
-- Vo is composable, allowing you to intuitively orchestrate complex work flows
+- Tiny library (4kb minified + gzipped)
+- Supports promises & generators
+- Serial and parallel execution
+- 3 different kinds of flows
 - Easily catch and fix errors anywhere in the pipeline
 - Returns a promise that you can yield on or "await"
-- Supports both stack and pipeline task flow
-- Tiny (4kb minified + gzip)
 - Browser & server support
 - Well-tested
 
@@ -20,6 +20,14 @@ Vo is a control flow library for minimalists.
 - Standalone: [vo.js](dist/vo.js) & [vo.min](dist/vo.min.js)
 
 ## Getting Started
+
+Vo supports 3 kinds of asynchronous flows:
+
+- **pipelines**: Transformation pipeline. Return values become the arguments to the next function
+- **stacks**: Express-style. Arguments are passed in at the top and flow through each middleware function
+- **composition**: Koa-style. Flows downstream through the functions, then back up.
+
+###
 
 An updated guide will be available soon. For now, take a look at the [tests](test/) for now.
 

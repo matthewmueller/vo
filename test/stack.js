@@ -70,54 +70,54 @@ describe('stack', function() {
     })
   })
 
-  describe('sync functions', function() {
-    function sync(a, b) {
-      assert.equal(a, 'a');
-      assert.equal(b, 'b');
-      return a + b;
-    }
+  // describe('sync functions', function() {
+  //   function sync(a, b) {
+  //     assert.equal(a, 'a');
+  //     assert.equal(b, 'b');
+  //     return a + b;
+  //   }
 
-    it('should work with sync functions', function (done) {
-      Vo.stack(sync)('a', 'b', function (err, a, b) {
-        if (err) return done(err);
-        assert.deepEqual(a, 'a');
-        assert.deepEqual(b, 'b');
-        done();
-      })
-    })
+  //   it('should work with sync functions', function (done) {
+  //     Vo.stack(sync)('a', 'b', function (err, a, b) {
+  //       if (err) return done(err);
+  //       assert.deepEqual(a, 'a');
+  //       assert.deepEqual(b, 'b');
+  //       done();
+  //     })
+  //   })
 
-    it('should return an array if were using promises', function() {
-      return Vo.stack(sync)('a', 'b')
-        .then(function (v) {
-          assert.deepEqual(v, ['a', 'b'])
-        })
-    })
+  //   it('should return an array if were using promises', function() {
+  //     return Vo.stack(sync)('a', 'b')
+  //       .then(function (v) {
+  //         assert.deepEqual(v, ['a', 'b'])
+  //       })
+  //   })
 
-    it('should return a single value if were using promises and a single arg', function() {
-      function sync (ab) {
-        assert.deepEqual(ab, ['a', 'b'])
-      }
+  //   it('should return a single value if were using promises and a single arg', function() {
+  //     function sync (ab) {
+  //       assert.deepEqual(ab, ['a', 'b'])
+  //     }
 
-      return Vo.stack(sync)(['a', 'b'])
-        .then(function (v) {
-          assert.deepEqual(v, ['a', 'b'])
-        })
-    })
+  //     return Vo.stack(sync)(['a', 'b'])
+  //       .then(function (v) {
+  //         assert.deepEqual(v, ['a', 'b'])
+  //       })
+  //   })
 
-    it('should return an array if were using generators and have multiple args', function *() {
-      var v = yield Vo.stack(sync)('a', 'b')
-      assert.deepEqual(v, ['a', 'b'])
-    })
+  //   it('should return an array if were using generators and have multiple args', function *() {
+  //     var v = yield Vo.stack(sync)('a', 'b')
+  //     assert.deepEqual(v, ['a', 'b'])
+  //   })
 
-    it('should return an single value if were using generators have one arg', function *() {
-      function sync (ab) {
-        assert.deepEqual(ab, ['a', 'b'])
-      }
+  //   it('should return an single value if were using generators have one arg', function *() {
+  //     function sync (ab) {
+  //       assert.deepEqual(ab, ['a', 'b'])
+  //     }
 
-      var v = yield Vo.stack(sync)(['a', 'b'])
-      assert.deepEqual(v, ['a', 'b'])
-    })
-  })
+  //     var v = yield Vo.stack(sync)(['a', 'b'])
+  //     assert.deepEqual(v, ['a', 'b'])
+  //   })
+  // })
 
   describe('promises: vo(fn)(args, ...).then()', function() {
     it('should support promises', function(done) {
