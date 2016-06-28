@@ -23,7 +23,7 @@ Minimalist, yet complete control flow library
 - Node.js or Browserify: `npm install vo`
 - Standalone: [vo.js](dist/vo.js) & [vo.min](dist/vo.min.js)
 
-## Getting Started
+## Learn by example
 
 Vo supports 2 kinds of asynchronous flows:
 
@@ -31,27 +31,6 @@ Vo supports 2 kinds of asynchronous flows:
 - **stacks**: Express-style. Arguments are passed in at the top and flow through each middleware function
 
 Both of these flows support both parallel and serial execution
-
-## Example
-
-```js
-function * get (url) {
-  return yield fetch(url)
-}
-
-function map (responses) {
-  return responses.map(res => res.status)
-}
-
-vo([
-  fetch('https://standupjack.com'),
-  fetch('https://google.com')
-], map).then(function (statuses) {
-  assert.deepEqual([ 200, 200 ])
-})
-```
-
-## Learn by example
 
 There's a lot going on behind the scenes of vo, so lets take these examples one at a time:
 
