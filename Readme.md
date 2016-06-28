@@ -6,14 +6,15 @@ Minimalist, yet complete control flow library
 ## What you get
 
 - **new in 4.0** Consistent function signatures
-- Tiny library (4kb minified + gzipped)
+- Tiny library (16kb minified + gzipped, common modules)
+- 2 different kinds of flows: pipeline & stack
+- Browser & server support
 - Supports promises, generators, & sync functions
 - Serial and parallel execution for every flow
-- 2 different kinds of flows: pipeline & stack
+- Returns a promise that you can yield on or "await"
+- `DEBUG=vo` for insight into what is being called
 - Easily catch and fix errors anywhere in the pipeline
 - Errors passed as arguments so you know where the failure occurred
-- Returns a promise that you can yield on or "await"
-- Browser & server support
 - Early exit support
 - Well-tested
 
