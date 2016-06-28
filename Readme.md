@@ -30,11 +30,9 @@ Vo supports 2 kinds of asynchronous flows:
 - **pipelines**: Transformation pipeline. Return values become the arguments to the next function. As of **4.0.0**, only the first argument to vo changes.
 - **stacks**: Express-style. Arguments are passed in at the top and flow through each middleware function
 
-Both of these flows support both parallel and serial execution
+Both of these flows support both parallel and serial execution.
 
-There's a lot going on behind the scenes of vo, so lets take these examples one at a time:
-
-### Pipelines
+### Pipeline Examples
 
 Behaves like transform streams, where return values become arguments to the next function.
 
@@ -48,13 +46,13 @@ Behaves like transform streams, where return values become arguments to the next
 8. [pipeline composition using promises](examples/8-pipeline-composition.js)
 9. [pipeline composition with generators](examples/9-pipeline-composition.js)
 
-### Stacks
+### Stacks Examples
 
 Behaves like express middleware, where the initial arguments are arguments to every function, regardless of return value.
 
 Examples coming soon! Check out the comprehensive [test suite](test/) for now.
 
-### Compose
+### Compose Examples
 
 Not implemented yet! Going to use Blake's excellent [throwback](https://github.com/blakeembrey/throwback) library to implement this. Also, accepting PRs :-D
 
