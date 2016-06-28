@@ -1,4 +1,10 @@
 
+4.0.0 / 2016-06-28
+==================
+
+  * add any promise dep
+  * use a consistent signature for both pipeline and stack
+
 3.1.1 / 2016-03-17
 ==================
 
