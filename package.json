@@ -16,6 +16,7 @@
     "url": "git://github.com/lapwinglabs/vo.git"
   },
   "dependencies": {
+    "any-promise": "1.3.0",
     "co": "3.1.0",
     "combine-errors": "3.0.2",
     "lodash.compact": "^3.0.0",
