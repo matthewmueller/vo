@@ -36,77 +36,31 @@ describe('pipeline', function() {
     })
   })
 
-  // describe('sync functions: vo(fn)', function() {
-  //   it('should work with synchronous functions', function(done) {
-  //     function sync(a, b) {
-  //       assert.equal(a, 'a');
-  //       assert.equal(b, 'b');
-  //       return a + b;
-  //     }
-
-  //     Vo(sync)('a', 'b', function(err, v) {
-  //       if (err) return done(err);
-  //       assert.equal(v, 'ab');
-  //       done();
-  //     })
-  //   })
-
-  //   it('should catch thrown errors', function(done) {
-  //     function sync(a, b) {
-  //       assert.equal(a, 'a');
-  //       assert.equal(b, 'b');
-  //       throw new Error('some error');
-  //       return a + b;
-  //     }
-
-  //     Vo(sync)('a', 'b', function(err, v) {
-  //       includes(err.message, 'some error');
-  //       assert.equal(v, undefined);
-  //       done();
-  //     })
-  //   })
-
-  //   describe('async functions: vo(fn)', function() {
-  //     it('should work with asynchronous functions', function(done) {
-  //       function async(a, b, fn) {
-  //         assert.equal(a, 'a');
-  //         assert.equal(b, 'b');
-  //         fn(null, a + b);
-  //       }
-
-  //       Vo(async)('a', 'b', function(err, v) {
-  //         if (err) return done(err);
-  //         assert.equal(v, 'ab');
-  //         done();
-  //       });
-  //     });
-
-  //     it('should handle errors', function(done) {
-  //       function async(a, b, fn) {
-  //         assert.equal(a, 'a');
-  //         assert.equal(b, 'b');
-  //         return fn(new Error('some error'));
-  //       }
-
-  //       Vo(async)('a', 'b', function(err, v) {
-  //         includes(err.message, 'some error');
-  //         assert.equal(undefined, v);
-  //         done();
-  //       })
-  //     })
-  //   });
-
   describe('generators: vo(*fn)', function() {
-    it('should work with generators', function(done) {
+    it('should return a single value', function(done) {
+      function *gen(a) {
+        assert.equal(a, 'a');
+        return yield timeout(50);
+      }
+
+      Vo(gen)('a', function(err, v) {
+        if (err) return done(err);
+        assert.deepEqual(v, 50)
+        done();
+      });
+    })
+
+    it('should return an array when multiple args', function(done) {
       function *gen(a, b) {
         assert.equal(a, 'a');
         assert.equal(b, 'b');
         return yield timeout(50);
       }
 
-      Vo(gen)('a', 'b', function(err, v) {
+      Vo(gen)('a', 'b', function(err, a, b) {
         if (err) return done(err);
-        assert.equal(v, 50);
+        assert.equal(a, 50)
+        assert.equal(b, 'b')
         done();
       });
     })
@@ -128,7 +82,20 @@ describe('pipeline', function() {
   });
 
   describe('promises: vo(promise)', function() {
-    it('should work with promises', function(done) {
+    it('should work with a single arg', function(done) {
+      function promise(a, b) {
+        assert.equal(a, 'a');
+        return promise_timeout(50);
+      }
+
+      Vo(promise)('a', function(err, v) {
+        if (err) return done(err);
+        assert.equal(v, 50);
+        done();
+      })
+    })
+
+    it('should return first with array of args', function(done) {
       function promise(a, b) {
         assert.equal(a, 'a');
         assert.equal(b, 'b');
@@ -139,6 +106,30 @@ describe('pipeline', function() {
         if (err) return done(err);
         assert.equal(v, 50);
         done();
+      })
+    })
+
+    it('should work with 3 args', function() {
+      function a (a, b) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
+        return 'a'
+      }
+
+      function b (d, a) {
+        assert.equal(d, 'd')
+        assert.equal(a, 'a')
+        return 'b'
+      }
+
+      function c (d, a) {
+        assert.equal(d, 'd')
+        assert.equal(a, 'a')
+        return 'c'
+      }
+
+      return Vo([b, c])('d', 'a', 'b').then(function (v) {
+        assert.deepEqual(v, [['b', 'c'], 'a', 'b'])
       })
     })
 
@@ -159,16 +150,28 @@ describe('pipeline', function() {
   // });
 
   describe('promises: vo(fn)(args, ...).then()', function() {
-    it('should support promises', function() {
-      function async(a, b, fn) {
+    it('single arg', function() {
+      function * gen (a) {
         assert.equal(a, 'a');
-        assert.equal(b, 'b');
-        return fn(null, a + b);
+        return a
       }
 
-      return Vo(async)('a', 'b')
+      return Vo(gen)('a')
         .then(function (v) {
-          assert.equal(v, 'ab')
+          assert.deepEqual(v, 'a')
+        })
+    })
+
+    it('multiple args', function() {
+      function * gen (a, b, fn) {
+        assert.equal(a, 'a');
+        assert.equal(b, 'b');
+        return a + b
+      }
+
+      return Vo(gen)('a', 'b')
+        .then(function (v) {
+          assert.deepEqual(v, ['ab', 'b'])
         })
     })
   })
@@ -181,23 +184,24 @@ describe('pipeline', function() {
         o.push('a');
         assert.equal('a', a);
         assert.equal('b', b);
-        return 'a';
+        return 'a1';
       }
 
-      function b(a, fn) {
+      function b(a, b) {
         o.push('b');
-        assert.equal('a', a);
-        fn(null, 'b1', 'b2');
+        assert.equal('a1', a)
+        assert.equal('b', b)
+        return 'b'
       }
 
-      function c(a, b) {
-        assert.equal('b1', a);
-        assert.equal('b2', b);
+      function c(b1, b2) {
+        assert.equal('b', b1);
+        assert.equal('b', b2);
         o.push('c');
         return promise_timeout(50, 'c');
       }
 
-      function *d(c) {
+      function * d(c) {
         o.push('d');
         assert.equal('c', c);
         return yield timeout(50, 'd');
@@ -206,8 +210,8 @@ describe('pipeline', function() {
 
       Vo(a, b, c, d)('a', 'b', function(err, v) {
         if (err) return done(err);
-        assert.deepEqual(['a', 'b', 'c', 'd'], o);
-        assert.deepEqual('d', v);
+        assert.deepEqual(o, ['a', 'b', 'c', 'd']);
+        assert.deepEqual(v, 'd');
         done();
       })
     })
@@ -224,13 +228,12 @@ describe('pipeline', function() {
 
       function b(a, fn) {
         o.push('b');
-        assert.equal('a', a);
-        fn(null, 'b1', 'b2');
+        assert.equal('a', a)
+        return 'b'
       }
 
-      function c(a, b) {
-        assert.equal('b1', a);
-        assert.equal('b2', b);
+      function c(b) {
+        assert.equal('b', b);
         o.push('c');
         return promise_timeout(50, 'c');
       }
@@ -245,7 +248,7 @@ describe('pipeline', function() {
       Vo.apply([a, b, c, d])('a', 'b', function(err, v) {
         if (err) return done(err);
         assert.deepEqual(['a', 'b', 'c', 'd'], o);
-        assert.deepEqual('d', v);
+        assert.deepEqual(v, 'd');
         done();
       })
     })
@@ -260,20 +263,21 @@ describe('pipeline', function() {
         return 'a';
       }
 
-      function b(a, fn) {
+      function b(a, b) {
         o.push('b');
-        assert.equal('a', a);
-        fn(null, 'b1', 'b2');
+        assert.equal(a, 'a');
+        assert.equal(b, 'b');
+        return 'b'
       }
 
-      function c(a, b) {
+      function c(b1, b2) {
         o.push('c');
-        assert.equal(a, 'b1');
-        assert.equal(b, 'b2');
+        assert.equal(b1, 'b');
+        assert.equal(b2, 'b');
         return promise_timeout(null, 'c');
       }
 
-      function *d(a, b) {
+      function * d(a, b) {
         o.push('d');
         assert.equal('a', a);
         assert.equal('b', b);
@@ -299,16 +303,16 @@ describe('pipeline', function() {
         return 'a';
       }
 
-      function b(a, fn) {
+      function b(a) {
         o.push('b');
         assert.equal('a', a);
-        fn(null, 'b1', 'b2');
+        return 'b'
       }
 
-      function c(a, b) {
+      function c(b1, b2) {
         o.push('c');
-        assert.equal(a, 'b1');
-        assert.equal(b, 'b2');
+        assert.equal(b1, 'b');
+        assert.equal(b2, 'b');
         return promise_timeout(null, 'c');
       }
 
@@ -331,12 +335,12 @@ describe('pipeline', function() {
 
   describe('arrays: vo([...])', function() {
     function to(ms, arr) {
-      return function(fn) {
-        timeout(ms)(function(err, v) {
-          if (!ms) return fn(new Error('ms must be specified'));
-          arr.push(v);
-          fn(err, v);
-        })
+      return function() {
+        return promise_timeout(ms)
+          .then(function (v) {
+            arr.push(v);
+            return v
+          })
       }
     }
 
@@ -345,8 +349,8 @@ describe('pipeline', function() {
 
       Vo([to(50, o), to(150, o), to(100, o)])(function(err, v) {
         if (err) return done(err);
-        assert.deepEqual([50, 150, 100], v);
-        assert.deepEqual([50, 100, 150], o);
+        assert.deepEqual(o, [50, 100, 150]);
+        assert.deepEqual(v, [50, 150, 100]);
         done();
       })
 
@@ -356,7 +360,7 @@ describe('pipeline', function() {
       var o = [];
 
       Vo([to(50, o), to(0, o), to(100, o)])(function(err, v) {
-        includes(err.message, 'ms must be specified');
+        includes(err.message, 'no ms present');
         assert.equal(undefined, v);
         done();
       });
@@ -378,12 +382,12 @@ describe('pipeline', function() {
 
   describe('objects: vo({...})', function() {
     function to(ms, arr) {
-      return function(fn) {
-        timeout(ms)(function(err, v) {
-          if (!ms) return fn(new Error('ms must be specified'));
-          arr.push(v);
-          fn(err, v);
-        })
+      return function() {
+        return promise_timeout(ms)
+          .then(function (v) {
+            arr.push(v);
+            return v
+          })
       }
     }
 
@@ -407,7 +411,7 @@ describe('pipeline', function() {
       var o = [];
 
       Vo({ a: to(50, o), b: to(150, o), c: to(0, o) })(function(err, v) {
-        includes(err.message, 'ms must be specified');
+        includes(err.message, 'no ms present');
         assert.equal(undefined, v);
         done();
       })
@@ -416,7 +420,7 @@ describe('pipeline', function() {
 
   describe('composition: vo(vo(...), [vo(...), vo(...)])', function() {
 
-    it('should support series composition', function(done) {
+    it('should support series composition', function() {
       var o = [];
 
       function a(a, b) {
@@ -426,16 +430,16 @@ describe('pipeline', function() {
         return 'a';
       }
 
-      function b(a, fn) {
+      function * b(a) {
         o.push('b');
         assert.equal('a', a);
-        fn(null, 'b1', 'b2');
+        return 'b'
       }
 
       function c(b1, b2) {
         o.push('c');
-        assert.equal(b1, 'b1')
-        assert.equal(b2, 'b2')
+        assert.equal(b1, 'b')
+        assert.equal(b2, 'b')
         return promise_timeout(50, 'c');
       }
 
@@ -445,45 +449,40 @@ describe('pipeline', function() {
         return yield timeout(50, 'd');
       }
 
-      Vo(Vo(a, b), c, d)('a', 'b', function(err, v) {
-        if (err) return done(err);
-        assert.equal('d', v);
-        assert.deepEqual(['a', 'b', 'c', 'd'], o);
-        done();
+      return Vo(Vo(a, b), c, d)('a', 'b').then(v => {
+        assert.deepEqual(v, ['d', 'b']);
+        assert.deepEqual(o, ['a', 'b', 'c', 'd']);
       })
     });
 
-    it('should support async composition', function(done) {
+    it('should support async composition', function() {
       function to(ms, arr) {
-        return function(fn) {
-          timeout(ms)(function(err, v) {
-            if (!ms) return fn(new Error('ms must be specified'));
-            arr.push(v);
-            fn(err, v);
-          })
+        return function() {
+          return promise_timeout(ms)
+            .then(function (v) {
+              arr.push(v);
+              return v
+            })
         }
       }
 
       var o = [];
       var a = Vo([to(50, o), to(150, o)]);
       var b = Vo([to(100, o), to(200, o)]);
-
-      Vo([a, b])(function(err, v) {
-        if (err) return done(err);
+      return Vo([a, b]).then(function (v) {
         assert.deepEqual([[50, 150], [100, 200]], v);
         assert.deepEqual([50, 100, 150, 200], o);
-        done();
       });
     })
 
-    it('should support async composition with objects', function(done) {
+    it('should support async composition with objects', function () {
       function to(ms, arr) {
-        return function(fn) {
-          timeout(ms)(function(err, v) {
-            if (!ms) return fn(new Error('ms must be specified'));
-            arr.push(v);
-            fn(err, v);
-          })
+        return function() {
+          return promise_timeout(ms)
+            .then(function (v) {
+              arr.push(v);
+              return v
+            })
         }
       }
 
@@ -491,9 +490,7 @@ describe('pipeline', function() {
       var a = Vo({ a1: to(50, o), a2: to(150, o) });
       var b = Vo({ b1: to(100, o), b2: to(200, o) });
 
-      Vo({ c1: a, c2: b })(function(err, v) {
-        if (err) return done(err);
-
+      return Vo({ c1: a, c2: b }).then(function (v) {
         assert.deepEqual(v, {
           c1: {
             a1: 50,
@@ -504,20 +501,18 @@ describe('pipeline', function() {
             b2: 200
           }
         });
-        assert.deepEqual([50, 100, 150, 200], o);
-
-        done();
+        assert.deepEqual(o, [50, 100, 150, 200]);
       });
     });
 
     it('should propagate errors', function(done) {
       function to(ms, arr) {
-        return function(fn) {
-          timeout(ms)(function(err, v) {
-            if (!ms) return fn(new Error('ms must be specified'));
-            arr.push(v);
-            fn(err, v);
-          })
+        return function() {
+          return promise_timeout(ms)
+            .then(function (v) {
+              arr.push(v);
+              return v
+            })
         }
       }
 
@@ -526,30 +521,34 @@ describe('pipeline', function() {
       var b = Vo({ b1: to(100, o), b2: to(200, o) });
 
       Vo({ c1: a, c2: b })(function(err, v) {
-        includes(err.message, 'ms must be specified');
+        includes(err.message, 'no ms present');
         assert.equal(undefined, v);
         done();
       });
     });
 
-    it('should have consistent & expected error signatures (only the error)', function() {
-      function a (a, b, fn) {
-        return fn(null, 'a', 'b', 'c')
+    it('should have consistent & expected error signatures', function() {
+      function a (a, b) {
+        return 'b'
       }
 
       function b (a, b, fn) {
+        assert.equal(a, 'a')
+        assert.equal(b, 'b')
         throw new Error('b error')
-        fn(null, 'b')
       }
 
-      function c (err, out) {
-        console.log(out)
-        return 'hi'
+      function * c (err, a, b) {
+        assert.equal(a[0], 'b')
+        assert.equal(a[1].message, 'b error')
+        assert.equal(b, 'b')
+        assert.equal(err.message, 'b error')
+        return 'c'
       }
 
       return Vo([a, b], Vo.catch(c))('a', 'b')
         .then(function (v) {
-          console.log(v)
+          assert.deepEqual(v, ['c', 'b'])
         })
     })
   })
@@ -574,7 +573,7 @@ describe('pipeline', function() {
 
       return Vo(a, Vo(b, c))('a', 'b')
         .then(function (v) {
-          assert.deepEqual(v, 'c')
+          assert.deepEqual(v, ['c', 'b'])
         })
     })
 
@@ -597,7 +596,7 @@ describe('pipeline', function() {
 
       return Vo(Vo(a, b), c)('a', 'b')
         .then(function (v) {
-          assert.deepEqual(v, 'c')
+          assert.deepEqual(v, ['c', 'b'])
         })
     })
   })
@@ -610,10 +609,10 @@ describe('pipeline', function() {
         return 'a'
       }
 
-      function b (d, a, next) {
+      function b (d, a) {
         assert.equal(d, 'd')
         assert.equal(a, 'a')
-        next(null, 'b')
+        return 'b'
       }
 
       function c (d, a) {
@@ -622,10 +621,9 @@ describe('pipeline', function() {
         return 'c'
       }
 
-      return Vo(a, Vo([b, c]).bind(null, 'd'))('a', 'b')
-        .then(function (v) {
-          assert.deepEqual(v, ['b', 'c'])
-        })
+      return Vo([b, c]).bind(null, 'd')('a', 'b').then(function (v) {
+        assert.deepEqual(v, [['b', 'c'], 'a', 'b'])
+      })
     })
 
     it('bound functions should work with catch', function() {
@@ -656,7 +654,7 @@ describe('pipeline', function() {
       return Vo(a, Vo([b, c]).bind(null, 'd'), Vo.catch(d))('a', 'b')
         .then(function (v) {
           assert.equal(called, 0)
-          assert.deepEqual(v, ['b', 'c'])
+          assert.deepEqual(v, [['b', 'c'], 'b'])
         })
     })
   })

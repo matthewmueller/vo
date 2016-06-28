@@ -108,6 +108,15 @@ function run (fn) {
   // with "vo instanceof Vo"
   vo.vo = true
 
+  // thenable support
+  vo.then = function (success, failure) {
+    return vo().then(success, failure)
+  }
+
+  vo.catch = function (failure) {
+    return vo().catch(failure)
+  }
+
   return vo
 }
 

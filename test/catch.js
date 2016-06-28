@@ -18,22 +18,22 @@ describe('vo.catch(fn)', function() {
         throw new Error('oh noes!')
       }
 
-      function b (err, a, b, fn) {
+      function b (err, a, b) {
         includes(err.message, 'oh noes!')
-        assert.equal(a, 'a')
+        assert.equal(a.message, 'oh noes!')
         assert.equal(b, 'b')
-        fn(null, 'c')
+        return 'c'
       }
 
-      function c (a, b) {
-        assert.equal(a, 'a')
+      function c (c, b) {
+        assert.equal(c, 'c')
         assert.equal(b, 'b')
         return 'd'
       }
 
-      return vo.stack(a, vo.catch(b), c)('a', 'b')
+      return vo(a, vo.catch(b), c)('a', 'b')
         .then(function (v) {
-          assert.deepEqual(v, ['a', 'b'])
+          assert.deepEqual(v, ['d', 'b'])
         })
     })
 
@@ -44,11 +44,11 @@ describe('vo.catch(fn)', function() {
         throw new Error('oh noes!')
       }
 
-      function b (err, a, b, fn) {
+      function b (err, a, b) {
         includes(err.message, 'oh noes!')
         assert.equal(a, 'a')
         assert.equal(b, 'b')
-        fn(null, 'c')
+        return 'c'
       }
 
       function c (a, b) {
@@ -81,9 +81,9 @@ describe('vo.catch(fn)', function() {
         return 'b'
       }
 
-      function b (err, a, b, fn) {
+      function b (err, a, b) {
         throw new Error('should not have been called')
-        fn(null, 'c')
+        return 'c'
       }
 
       function c (a, b) {
@@ -104,10 +104,10 @@ describe('vo.catch(fn)', function() {
         assert.equal(b, 'b')
       }
 
-      function b (a, b, fn) {
+      function b (a, b) {
         assert.equal(a, 'a')
         assert.equal(b, 'b')
-        fn(new Error('oh noes!!'))
+        return 'c'
       }
 
       function c (err, a, b) {
@@ -132,9 +132,9 @@ describe('vo.catch(fn)', function() {
         throw new Error('oh noes!')
       }
 
-      function b (err, fn) {
+      function b (err) {
         includes(err.message, 'oh noes!')
-        fn(null, 'c')
+        return 'c'
       }
 
       function c (c) {
@@ -144,7 +144,7 @@ describe('vo.catch(fn)', function() {
 
       return vo(a, vo.catch(b), c)('a', 'b')
         .then(function (v) {
-          assert.deepEqual(v, 'd')
+          assert.deepEqual(v, ['d', 'b'])
         })
     })
   })
@@ -156,10 +156,10 @@ describe('vo.catch(fn)', function() {
       throw new Error('a had a boo boo')
     }
 
-    function b (a, b, fn) {
+    function b (a, b) {
       assert.equal(a, 'a')
       assert.equal(b, 'b')
-      fn(null, 'b')
+      return 'b'
     }
 
     function c (a, b) {
@@ -168,18 +168,18 @@ describe('vo.catch(fn)', function() {
       throw new Error('c had a boo boo')
     }
 
-    function d (err, arr, fn) {
+    function d (err, arr) {
       includes(err.message, 'a had a boo boo')
       includes(err.message, 'c had a boo boo')
       includes(arr[0].message, 'a had a boo boo')
       assert.equal(arr[1], 'b')
       includes(arr[2].message, 'c had a boo boo')
-      fn(null, 'd')
+      return 'd'
     }
 
     return vo([a, b, c], vo.catch(d))('a', 'b')
       .then(function (v) {
-        assert.deepEqual(v, 'd')
+        assert.deepEqual(v, ['d', 'b'])
       })
   })
 
@@ -190,10 +190,10 @@ describe('vo.catch(fn)', function() {
       throw new Error('a had a boo boo')
     }
 
-    function b (a, b, fn) {
+    function b (a, b) {
       assert.equal(a, 'a')
       assert.equal(b, 'b')
-      fn(null, 'b')
+      return 'b'
     }
 
     function c (a, b) {
@@ -202,18 +202,18 @@ describe('vo.catch(fn)', function() {
       throw new Error('c had a boo boo')
     }
 
-    function d (err, arr, fn) {
+    function d (err, arr) {
       includes(err.message, 'a had a boo boo')
       includes(err.message, 'c had a boo boo')
       includes(arr.a.message, 'a had a boo boo')
       assert.equal(arr.b, 'b')
       includes(arr.c.message, 'c had a boo boo')
-      fn(null, 'd')
+      return 'd'
     }
 
     return vo({ a: a, b: b, c: c }, vo.catch(d))('a', 'b')
       .then(function (v) {
-        assert.deepEqual(v, 'd')
+        assert.deepEqual(v, ['d', 'b'])
       })
   })
 })

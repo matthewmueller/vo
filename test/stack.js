@@ -120,19 +120,16 @@ describe('stack', function() {
   // })
 
   describe('promises: vo(fn)(args, ...).then()', function() {
-    it('should support promises', function(done) {
-      function async(a, b, fn) {
+    it('should support promises', function() {
+      function * c (a, b, fn) {
         assert.equal(a, 'a');
         assert.equal(b, 'b');
-        return fn(null, a + b);
+        return 'c'
       }
 
-      Vo.stack(async)('a', 'b')
+      return Vo.stack(c)('a', 'b')
         .then(function (v) {
-          done()
-        })
-        .catch (function (e) {
-          console.log(e)
+          assert.deepEqual(v, ['a', 'b'])
         })
     })
   })
@@ -148,11 +145,11 @@ describe('stack', function() {
         return 'a';
       }
 
-      function b(a, b, fn) {
+      function * b(a, b, fn) {
         o.push('b');
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -193,7 +190,7 @@ describe('stack', function() {
         o.push('b');
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -236,7 +233,7 @@ describe('stack', function() {
         assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -279,7 +276,7 @@ describe('stack', function() {
         o.push('b');
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -319,7 +316,7 @@ describe('stack', function() {
         o.push('b');
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -347,12 +344,12 @@ describe('stack', function() {
 
   describe('arrays: vo([...])', function() {
     function to(ms, arr) {
-      return function(fn) {
-        timeout(ms)(function(err, v) {
-          if (!ms) return fn(new Error('ms must be specified'));
-          arr.push(v);
-          fn(err, v);
-        })
+      return function() {
+        return promise_timeout(ms)
+          .then(function (v) {
+            arr.push(v);
+            return v
+          })
       }
     }
 
@@ -370,7 +367,7 @@ describe('stack', function() {
       var o = [];
 
       Vo.stack([to(50, o), to(0, o), to(100, o)])(function(err, v) {
-        includes(err.message, 'ms must be specified')
+        includes(err.message, 'no ms present')
         assert.equal(undefined, v);
         done();
       });
@@ -392,12 +389,12 @@ describe('stack', function() {
 
   describe('objects: vo({...})', function() {
     function to(ms, arr) {
-      return function(fn) {
-        timeout(ms)(function(err, v) {
-          if (!ms) return fn(new Error('ms must be specified'));
-          arr.push(v);
-          fn(err, v);
-        })
+      return function() {
+        return promise_timeout(ms)
+          .then(function (v) {
+            arr.push(v);
+            return v
+          })
       }
     }
 
@@ -416,7 +413,7 @@ describe('stack', function() {
       var o = [];
 
       Vo.stack({ a: to(50, o), b: to(150, o), c: to(0, o) })(function(err, v) {
-        includes(err.message, 'ms must be specified')
+        includes(err.message, 'no ms present')
         assert.equal(undefined, v);
         done();
       })
@@ -441,7 +438,7 @@ describe('stack', function() {
         assert.equal(this.ctx, 'ctx')
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -484,7 +481,7 @@ describe('stack', function() {
         o.push('b');
         assert.equal('a', a);
         assert.equal('b', b);
-        fn(null, 'b1', 'b2');
+        return 'c'
       }
 
       function c(a, b) {
@@ -509,13 +506,12 @@ describe('stack', function() {
 
     it('should support async composition', function(done) {
       function to(ms, arr) {
-        return function(fn) {
-          assert.equal(this.ctx, 'ctx')
-          timeout(ms)(function(err, v) {
-            if (!ms) return fn(new Error('ms must be specified'));
-            arr.push(v);
-            fn(err, v);
-          })
+        return function() {
+          return promise_timeout(ms)
+            .then(function (v) {
+              arr.push(v);
+              return v
+            })
         }
       }
 
@@ -533,13 +529,12 @@ describe('stack', function() {
 
     it('should support async composition with objects', function(done) {
       function to(ms, arr) {
-        return function(fn) {
-          assert.equal(this.ctx, 'ctx')
-          timeout(ms)(function(err, v) {
-            if (!ms) return fn(new Error('ms must be specified'));
-            arr.push(v);
-            fn(err, v);
-          })
+        return function() {
+          return promise_timeout(ms)
+            .then(function (v) {
+              arr.push(v);
+              return v
+            })
         }
       }
 
@@ -559,12 +554,12 @@ describe('stack', function() {
 
     it('should propagate errors', function(done) {
       function to(ms, arr) {
-        return function(fn) {
-          timeout(ms)(function(err, v) {
-            if (!ms) return fn(new Error('ms must be specified'));
-            arr.push(v);
-            fn(err, v);
-          })
+        return function() {
+          return promise_timeout(ms)
+            .then(function (v) {
+              arr.push(v);
+              return v
+            })
         }
       }
 
@@ -573,7 +568,7 @@ describe('stack', function() {
       var b = Vo.stack({ b1: to(100, o), b2: to(200, o) });
 
       Vo.stack({ c1: a, c2: b })(function(err, v) {
-        includes(err.message, 'ms must be specified')
+        includes(err.message, 'no ms present')
         assert.equal(undefined, v);
         done();
       });
@@ -584,9 +579,8 @@ describe('stack', function() {
         return fn(null, 'a', 'b', 'c')
       }
 
-      function b (a, b, fn) {
+      function b (a, b) {
         throw new Error('b error')
-        fn(null, 'b')
       }
 
       function c (err, a, b) {
@@ -595,7 +589,7 @@ describe('stack', function() {
 
       return Vo.stack(a, b, Vo.catch(c))('a', 'b')
         .then(function (v) {
-          console.log(v)
+          assert.deepEqual(v, ['a', 'b'])
         })
     })
   })
