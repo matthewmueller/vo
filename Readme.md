@@ -6,7 +6,7 @@ Minimalist, yet complete control flow library
 ## What you get
 
 - **new in 4.0** Consistent function signatures
-- Tiny library (16kb minified + gzipped, common modules)
+- Tiny library (16kb minified + gzipped, lots of module sharing)
 - 2 different kinds of flows: pipeline & stack
 - Browser & server support
 - Supports promises, generators, & sync functions
