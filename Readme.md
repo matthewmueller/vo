@@ -5,11 +5,13 @@ Vo is a control flow library for minimalists.
 
 ## What you get
 
+- **new in 4.0** Consistent function signatures
 - Tiny library (4kb minified + gzipped)
-- Supports promises & generators
-- Serial and parallel execution
-- 3 different kinds of flows
+- Supports promises, generators, & sync functions
+- Serial and parallel execution for every flow
+- 2 different kinds of flows: pipeline & stack
 - Easily catch and fix errors anywhere in the pipeline
+- Errors passed as arguments so you know where the failure occurred
 - Returns a promise that you can yield on or "await"
 - Browser & server support
 - Well-tested
@@ -21,15 +23,35 @@ Vo is a control flow library for minimalists.
 
 ## Getting Started
 
-Vo supports 3 kinds of asynchronous flows:
+Vo supports 2 kinds of asynchronous flows:
 
 - **pipelines**: Transformation pipeline. Return values become the arguments to the next function
 - **stacks**: Express-style. Arguments are passed in at the top and flow through each middleware function
-- **composition**: Koa-style. Flows downstream through the functions, then back up.
 
-###
+Both of these flows support both parallel and serial execution
 
-An updated guide will be available soon. For now, take a look at the [tests](test/) for now.
+## Example
+
+```js
+function * get (url) {
+  return yield fetch(url)
+}
+
+function map (responses) {
+  return responses.map(res => res.status)
+}
+
+vo([
+  fetch('https://standupjack.com'),
+  fetch('https://google.com')
+], map).then(function (statuses) {
+  assert.deepEqual([ 200, 200 ])
+})
+```
+
+## Guide
+
+Coming soon! Check out the comprehensive [test suite](test/) for now.
 
 ## Vo Runtime
 
@@ -46,31 +68,11 @@ console.log(res.status) // 200
 vo index.js
 ```
 
-## Things to keep in mind
+### FAQ
 
-### Binding a generator function isn't consistently implemented yet
+##### Binding a generator function isn't implemented consistently yet
 
-```js
-function * a () {
-  // this === ctx
-}
-
-vo(a.bind(ctx))
-```
-
-The following will work on node 5 and latest chrome, but not on latest safari or node 4. Latest babel does not fix this problem.
-
-Just to be safe, I'd install [co-bind](https://github.com/vdemedes/co-bind) and do this instead:
-
-```js
-var bind = require('co-bind')
-
-function * a () {
-  // this === ctx
-}
-
-vo(bind(a, ctx))
-```
+Use [co-bind](https://github.com/vdemedes/co-bind) just to be safe.
 
 ## Test
 
