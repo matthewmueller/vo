@@ -131,6 +131,6 @@ function run (fn) {
 Vo.catch = function (fn) {
   // simple wrapper to avoid attaching to the passed-in function
   function catcher () { return fn }
-  catcher.catch = true
+  catcher.__catch__ = true
   return catcher
 }

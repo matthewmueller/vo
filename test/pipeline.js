@@ -51,6 +51,18 @@ describe('pipeline', function() {
       });
     })
 
+    it('should yield on initialized generators', function(done) {
+      function *gen(ms) {
+        return yield timeout(ms);
+      }
+
+      Vo(gen(50))(function(err, v) {
+        if (err) return done(err);
+        assert.deepEqual(v, 50)
+        done();
+      });
+    })
+
     it('should return an array when multiple args', function(done) {
       function *gen(a, b) {
         assert.equal(a, 'a');
@@ -699,6 +711,67 @@ describe('pipeline', function() {
 
       return Vo(bind(a, { ctx: 'context' }, 'binding'))('hi')
         .then(v => assert.equal(v, 'all done'))
+    })
+  })
+
+  describe('early exit', function() {
+    it('should exit early if null', function() {
+      let out = []
+
+      function a () {
+        out.push('a')
+        return null
+      }
+
+      function b () {
+        out.push('b')
+      }
+
+      function c () {
+        out.push('c')
+      }
+
+      return Vo(a, b, c)('a', 'b').then(v => assert.deepEqual(out, ['a']))
+    })
+
+    it('should exit early if undefined', function() {
+      let out = []
+
+      function a () {
+        out.push('a')
+        return 'b'
+      }
+
+      function b () {
+        out.push('b')
+        return undefined
+      }
+
+      function c () {
+        out.push('c')
+      }
+
+      return Vo(a, b, c)('a', 'b').then(v => assert.deepEqual(out, ['a', 'b']))
+    })
+
+    it('shouldn\'t exit early if one null in array', function() {
+      let out = []
+
+      function a () {
+        out.push('a')
+        return 'b'
+      }
+
+      function b () {
+        out.push('b')
+        return null
+      }
+
+      function c (arr) {
+        out.push('c')
+      }
+
+      return Vo([a, b], c)('a', 'b').then(v => assert.equal(out.length, 3))
     })
   })
 });
