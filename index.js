@@ -5,6 +5,7 @@
  */
 
 var Pipeline = require('./lib/pipeline')
+var Promise = require('any-promise')
 var Stack = require('./lib/stack')
 var sliced = require('sliced')
 var isArray = Array.isArray

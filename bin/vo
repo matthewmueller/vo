@@ -1,0 +1,106 @@
+#!/usr/bin/env node
+
+if (!already_patched()) {
+
+  /**
+   * Module Dependencies
+   */
+
+  var path = require('path')
+  var vo = require('../')
+  var fs = require('fs')
+
+  global.__vo__ = vo
+
+  /**
+   * Arguments
+   */
+
+  var args = process.argv.slice(2)
+  var files = args.filter(file => file[0] !== '-').map(file => path.resolve(file))
+  var exts = files.map(file => path.extname(file))
+  var originals = {}
+  var patch = {}
+
+  /**
+   * Extnames
+   */
+
+  exts.map(function (ext) {
+    originals[ext] = require.extensions[ext]
+    require.extensions[ext] = vo_runtime
+  })
+
+  /**
+   * Require the file
+   */
+
+  files.map(function (file) {
+    patch[file] = true
+    require(file)
+  })
+}
+
+/**
+ *
+ */
+
+function vo_runtime (module, file) {
+  if (!patch[file]) return originals[path.extname(file)](module, file)
+  var content = fs.readFileSync(file, 'utf8');
+
+  // remove the Byte Order Marker if present
+  content = stripBOM(content);
+
+  // strip away the shebang if present
+  content = stripShebang(content);
+
+  // compile with vo
+  content = `global.__vo__(function * boot () {
+    ${content}
+  })(function (err) {
+    if (err) throw err
+  })`
+
+  module._compile(content, file);
+}
+
+
+/**
+ * Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+ * because the buffer-to-string conversion in `fs.readFileSync()`
+ * translates it to FEFF, the UTF-16 BOM.
+ *
+ * Copied directly from joyent/node's lib/module.js
+ *
+ * @api private
+ */
+
+function stripBOM (content) {
+  if (content.charCodeAt(0) === 0xFEFF) {
+    content = content.slice(1);
+  }
+  return content;
+}
+
+/**
+ * Strips away the "shebang" from the source file if present.
+ *
+ * Copied directly from joyent/node's lib/module.js
+ *
+ * @api private
+ */
+
+function stripShebang (content) {
+  return content.replace(/^\#\!.*/, '');
+}
+
+/**
+ * Check if require.extensions['.js'] is already patched by gnode
+ *
+ * @api private
+ */
+
+function already_patched () {
+  return 'vo_runtime' == require.extensions['.js'].name;
+}

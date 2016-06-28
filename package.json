@@ -1,6 +1,6 @@
 {
   "name": "vo",
-  "version": "3.0.1",
+  "version": "3.1.1",
   "description": "Vo is a control flow library for minimalists",
   "keywords": [
     "control",
@@ -24,8 +24,12 @@
   },
   "devDependencies": {
     "browserify": "^13.0.0",
+    "co-bind": "^1.0.0",
     "co-mocha": "^1.1.2",
     "mocha": "^2.4.5"
   },
-  "main": "index"
+  "main": "index",
+  "bin": {
+    "vo": "./bin/vo"
+  }
 }

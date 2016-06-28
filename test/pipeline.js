@@ -3,6 +3,7 @@
  */
 
 var assert = require('assert');
+var bind = require('co-bind');
 var Vo = require('..');
 
 /**
@@ -407,6 +408,34 @@ describe('pipeline', function() {
       })
     })
 
+    it('should pass through any literals', function() {
+      return Vo({
+        type: 'create user',
+        payload: {
+          name: 'matt',
+          age: 26,
+          favorite_numbers: [36, 88],
+          superuser: undefined,
+          admin: null,
+          object: {},
+          array: []
+        }
+      })('anything').then(function (v) {
+        assert.deepEqual(v, {
+          type: 'create user',
+          payload: {
+            name: 'matt',
+            age: 26,
+            favorite_numbers: [36, 88],
+            superuser: undefined,
+            admin: null,
+            object: {},
+            array: []
+          }
+        })
+      })
+    })
+
     it('should catch any errors', function(done) {
       var o = [];
 
@@ -656,6 +685,20 @@ describe('pipeline', function() {
           assert.equal(called, 0)
           assert.deepEqual(v, [['b', 'c'], 'b'])
         })
+    })
+  })
+
+  describe('.bind()', function() {
+    it('should work with bound generators', function() {
+      function * a (binding, msg) {
+        assert.equal(this.ctx, 'context')
+        assert.equal(binding, 'binding')
+        assert.equal(msg, 'hi')
+        return 'all done'
+      }
+
+      return Vo(bind(a, { ctx: 'context' }, 'binding'))('hi')
+        .then(v => assert.equal(v, 'all done'))
     })
   })
 });
