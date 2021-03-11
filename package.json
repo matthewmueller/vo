@@ -2,6 +2,7 @@
   "name": "vo",
   "version": "4.0.2",
   "description": "Vo is a control flow library for minimalists",
+  "license": "MIT",
   "keywords": [
     "control",
     "flow",
